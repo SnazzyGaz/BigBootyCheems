@@ -8,31 +8,58 @@ using System.IO;
 using System.Media;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Big Booty Cheems")]
 [assembly: AssemblyProduct("Big Booty Cheems")]
-[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.0.1.0")]
 
 namespace BigBootyCheems
 {
     static class Program
     {
+        public static bool JustUpdated;
+
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
+            JustUpdated = Array.IndexOf(args, "--updated") >= 0;
             using (var mutex = new Mutex(false, "BigBootyCheems_SingleInstance"))
+            using (var quit = new EventWaitHandle(false, EventResetMode.AutoReset, "BigBootyCheems_Quit"))
             {
                 bool owned;
-                try { owned = mutex.WaitOne(0); } catch (AbandonedMutexException) { owned = true; }
-                if (!owned) return;
+                try { owned = mutex.WaitOne(JustUpdated ? 10000 : 0); }
+                catch (AbandonedMutexException) { owned = true; }
+                if (!owned)
+                {
+                    // already running: ask that copy to close, and take over (newest launch wins)
+                    quit.Set();
+                    try { owned = mutex.WaitOne(6000); }
+                    catch (AbandonedMutexException) { owned = true; }
+                    if (!owned)
+                    {
+                        MessageBox.Show("An older Big Booty Cheems is still running and didn't close.\n\nRight-click him, choose Exit, then start this one again.",
+                            "Big Booty Cheems", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                }
+                quit.Reset();
                 try
                 {
+                    Updater.CleanUpOld();
                     try { Native.SetProcessDPIAware(); } catch { }
                     Native.NoPowerThrottling();
                     Application.EnableVisualStyles();
-                    Application.Run(new Buddy());
+                    var form = new Buddy();
+                    var listener = new Thread(() =>
+                    {
+                        quit.WaitOne();
+                        try { form.BeginInvoke((Action)form.Close); } catch { }
+                    }) { IsBackground = true };
+                    listener.Start();
+                    Application.Run(form);
                 }
                 finally { mutex.ReleaseMutex(); }
             }
@@ -111,6 +138,9 @@ namespace BigBootyCheems
 
             menu = new ContextMenuStrip();
             menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("Check for updates...", null, (s, e) => CheckForUpdates());
+            menu.Items.Add(new ToolStripMenuItem("Big Booty Cheems v" + Updater.Short(Updater.Current)) { Enabled = false });
+            menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Exit", null, (s, e) => Close());
 
             timer = new System.Windows.Forms.Timer { Interval = 15 };
@@ -130,6 +160,63 @@ namespace BigBootyCheems
             foreach (ToolStripItem it in menu.Items)
                 if (it is ToolStripMenuItem && ((ToolStripMenuItem)it).HasDropDownItems) KeepOnScreen((ToolStripMenuItem)it);
             lastPoll = Cursor.Position; lastPollTick = Environment.TickCount;
+        }
+
+        // ---------------------------------------------------------- updates (only when you ask)
+        bool updateBusy;
+
+        void CheckForUpdates()
+        {
+            if (updateBusy) return;
+            updateBusy = true;
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                Updater.Release rel = null; string err = null;
+                try { rel = Updater.GetLatest(); } catch (Exception ex) { err = ex.Message; }
+                BeginInvoke((Action)(() =>
+                {
+                    updateBusy = false;
+                    if (rel == null)
+                    {
+                        MessageBox.Show(this, "Couldn't reach GitHub to check for updates.\n\n" + err, "Big Booty Cheems", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    if (rel.Version <= Updater.Current)
+                    {
+                        MessageBox.Show(this, "You're on the latest version (v" + Updater.Short(Updater.Current) + ").", "Big Booty Cheems", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    string notes = (rel.Notes ?? "").Trim();
+                    if (notes.Length > 400) notes = notes.Substring(0, 400) + "...";
+                    var ask = MessageBox.Show(this,
+                        "Big Booty Cheems v" + Updater.Short(rel.Version) + " is out (you have v" + Updater.Short(Updater.Current) + ").\n\n" +
+                        (notes.Length > 0 ? notes + "\n\n" : "") + "Update now? He'll restart.",
+                        "Big Booty Cheems update", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                    if (ask == DialogResult.Yes) InstallUpdate(rel);
+                }));
+            });
+        }
+
+        void InstallUpdate(Updater.Release rel)
+        {
+            updateBusy = true;
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                string err = null;
+                try { Updater.DownloadAndSwap(rel); } catch (Exception ex) { err = ex.Message; }
+                BeginInvoke((Action)(() =>
+                {
+                    updateBusy = false;
+                    if (err != null)
+                    {
+                        MessageBox.Show(this, "The update didn't install, so nothing was changed.\n\n" + err, "Big Booty Cheems", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    try { Process.Start(Application.ExecutablePath, "--updated"); }
+                    catch (Exception ex) { MessageBox.Show(this, "Updated, but couldn't restart: " + ex.Message, "Big Booty Cheems"); }
+                    Close();
+                }));
+            });
         }
 
         // ---------------------------------------------------------- menu placement: stay on the cheems' own monitor

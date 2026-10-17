@@ -18,7 +18,7 @@ for %%f in (art\*.png art\*.wav) do set "RES=!RES! /resource:%%f,%%~nxf"
 if not exist dist mkdir dist
 "%CSC%" /nologo /target:winexe /optimize+ /platform:anycpu ^
   /out:dist\BigBootyCheems.exe /win32icon:art\bbc.ico ^
-  /reference:System.Windows.Forms.dll /reference:System.Drawing.dll ^
+  /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll ^
   %RES% src\*.cs
 if errorlevel 1 (
   echo Build failed.
