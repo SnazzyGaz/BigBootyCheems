@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Big Booty Cheems")]
 [assembly: AssemblyProduct("Big Booty Cheems")]
-[assembly: AssemblyVersion("1.0.11.0")]
+[assembly: AssemblyVersion("1.0.13.0")]
 
 namespace BigBootyCheems
 {
@@ -115,7 +115,7 @@ namespace BigBootyCheems
         readonly List<Slap> slaps = new List<Slap>();
         System.Windows.Forms.Timer timer, poll;
         public Sfx WhipSound;
-        Sfx[] slapSounds; Sfx fartSound, splatSound;                 // real slaps; a random one each time
+        Sfx[] slapSounds, fartSounds; Sfx poopSound, splatSound;                 // real slaps; a random one each time
         readonly Random sndRng = new Random();
         readonly Queue<KeyValuePair<int, Point>> dragTrail = new Queue<KeyValuePair<int, Point>>();
         bool leftDown, dragging; Point dragStart, winStart;
@@ -130,7 +130,9 @@ namespace BigBootyCheems
             using (var s = Res("Blink.png")) using (var raw = new Bitmap(s)) srcShut = LoadArt(raw);
             src = srcOpen;
             WhipSound = new Sfx(Res("whip.wav"));
-            fartSound = new Sfx(Res("fart.wav")); splatSound = new Sfx(Res("splat.wav"));
+            poopSound = new Sfx(Res("poop.wav")); splatSound = new Sfx(Res("splat.wav"));
+            fartSounds = new Sfx[6];
+            for (int i = 0; i < fartSounds.Length; i++) fartSounds[i] = new Sfx(Res("fart" + (i + 1) + ".wav"));
             slapSounds = new Sfx[6];
             for (int i = 0; i < slapSounds.Length; i++) slapSounds[i] = new Sfx(Res("slap" + (i + 1) + ".wav"));
 
@@ -330,6 +332,14 @@ namespace BigBootyCheems
             Render();
         }
 
+        // a random fart take, never the same one twice running
+        int lastFart = -1;
+        void Fart(float gain)
+        {
+            int i; do i = sndRng.Next(fartSounds.Length); while (i == lastFart && fartSounds.Length > 1);
+            lastFart = i; fartSounds[i].Play(gain);
+        }
+
         // ---------------------------------------------------------- spray
         SprayOverlay spray;
 
@@ -349,7 +359,7 @@ namespace BigBootyCheems
             // so the stream emerges from under the art instead of appearing in mid-air
             var emit = ButtHole();
             if (CostumePoop(outfit, emit)) { timer.Start(); return; }
-            fartSound.Play();
+            poopSound.Play();
             bool wide = outfit == Outfit.Jet;      // he'll shoot off left: the liquid layer needs the whole width
             var scr = Screen.FromPoint(emit);
             if (spray != null && !spray.IsDisposed && spray.CanEmitFrom(emit) && (!wide || spray.OverlayLeft == scr.Bounds.Left))

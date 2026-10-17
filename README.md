@@ -96,5 +96,7 @@ Right-click → *Exit*, then delete `BigBootyCheems.exe` and the `%APPDATA%\BigB
 - App, clothing and tool art by MintyDoge.
 - The Cheems photo is of Balltze, the Shiba Inu behind the meme.
 - Slap sounds cut from ["Hand Clap / High Five / Realistic Slap"](https://freesound.org/people/olehenriksen/sounds/771247/) by olehenriksen (CC0).
-- Fart and splat cut from ["Wet Fart"](https://freesound.org/people/james.luib/sounds/818387/) by james.luib (CC0).
+- Splat cut from ["Wet Fart"](https://freesound.org/people/james.luib/sounds/818387/) by james.luib (CC0).
+- Poop sound cut from ["Realistic fart - What did you eat!"](https://freesound.org/people/inqvision/sounds/320779/) by inqvision ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)).
+- Farts cut from ["Farting Noises --- 1"](https://freesound.org/people/Hajisounds/sounds/640073/) by Hajisounds (CC0).
 - The code is MIT licensed (see [LICENSE](LICENSE)). The images and sounds in `art/` are **not** covered by the MIT licence.

@@ -114,7 +114,7 @@ namespace BigBootyCheems
 
         void GasPoop(Point e)
         {
-            fartSound.Play(1f);
+            Fart(1f);
             var f = FxUnder();
             for (int i = 0; i < 26; i++)
                 f.Add(new Particle
@@ -129,7 +129,7 @@ namespace BigBootyCheems
 
         void AstroPoop(Point e)
         {
-            fartSound.Play(0.6f);
+            Fart(0.6f);
             var f = FxUnder();
             for (int i = 0; i < 12; i++)
                 f.Add(new Particle
@@ -159,7 +159,7 @@ namespace BigBootyCheems
 
         void PropellerPoop(Point e)
         {
-            fartSound.Play(1f);
+            Fart(1f);
             var f = FxUnder();
             for (int i = 0; i < 14; i++)
                 f.Add(new Particle
