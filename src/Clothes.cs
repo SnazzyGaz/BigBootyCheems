@@ -34,7 +34,7 @@ namespace BigBootyCheems
             { "Hdres", "Headdress" }, { "Policehat", "Police Hat" }, { "ltherd", "Leather Daddy Vest" },
             { "Gasm", "Gas Mask" }, { "sung", "Sunglasses" },
             { "cb", "Cowboy Hat" }, { "hawa", "Hawaiian Shirt" }, { "HiVis", "Hi-Vis Vest" },
-            { "bnda", "Bandit Bandana" }, { "pplr", "Propeller Hat" }, { "rollers", "Roller Skates" },
+            { "whtsnks", "White Trainers" }, { "bnda", "Bandit Bandana" }, { "pplr", "Propeller Hat" }, { "rollers", "Roller Skates" },
         };
 
         static string Label(string n)

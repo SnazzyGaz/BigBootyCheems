@@ -26,9 +26,10 @@ namespace BigBootyCheems
             try { fallback.Load(); } catch { }
         }
 
-        public void Play()
+        public void Play() { Play(1f); }
+        public void Play(float gain)
         {
-            if (Samples != null && Mixer.Play(Samples)) return;
+            if (Samples != null && Mixer.Play(Samples, gain)) return;
             try { fallback.Play(); } catch { }
         }
 
@@ -75,7 +76,7 @@ namespace BigBootyCheems
         const int IdleOffMs = 20000;                     // stop the stream after this long with nothing to do
         static IntPtr hwo;
         static IntPtr[] hdrs = new IntPtr[NBuf], datas = new IntPtr[NBuf];
-        static readonly List<int[]> voices = new List<int[]>();   // {soundIndex, position}
+        static readonly List<int[]> voices = new List<int[]>();   // {soundIndex, position, gain*256}
         static readonly List<short[]> sounds = new List<short[]>();
         static readonly object gate = new object();
         static Thread thread; static volatile bool running; static volatile int lastUse;
@@ -98,7 +99,7 @@ namespace BigBootyCheems
             }
         }
 
-        public static bool Play(short[] s)
+        public static bool Play(short[] s, float gain)
         {
             Warm();
             if (!running) return false;
@@ -107,7 +108,7 @@ namespace BigBootyCheems
                 int idx = sounds.IndexOf(s);
                 if (idx < 0) { sounds.Add(s); idx = sounds.Count - 1; }
                 if (voices.Count >= 6) voices.RemoveAt(0);
-                voices.Add(new[] { idx, 0 });
+                voices.Add(new[] { idx, 0, (int)(gain * 256) });
             }
             return true;
         }
@@ -186,7 +187,8 @@ namespace BigBootyCheems
                 {
                     var s = sounds[voices[v][0]]; int pos = voices[v][1];
                     int n = Math.Min(BufSamples, s.Length - pos);
-                    for (int i = 0; i < n; i++) acc[i] += s[pos + i];
+                    int g = voices[v][2];
+                    for (int i = 0; i < n; i++) acc[i] += s[pos + i] * g >> 8;
                     voices[v][1] = pos + n;
                     if (pos + n >= s.Length) voices.RemoveAt(v);
                 }

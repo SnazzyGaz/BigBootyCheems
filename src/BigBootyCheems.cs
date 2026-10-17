@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Big Booty Cheems")]
 [assembly: AssemblyProduct("Big Booty Cheems")]
-[assembly: AssemblyVersion("1.0.1.0")]
+[assembly: AssemblyVersion("1.0.4.0")]
 
 namespace BigBootyCheems
 {
@@ -114,7 +114,9 @@ namespace BigBootyCheems
         int winX, winY;
         readonly List<Slap> slaps = new List<Slap>();
         System.Windows.Forms.Timer timer, poll;
-        Sfx whip;
+        public Sfx WhipSound;
+        Sfx[] slapSounds; Sfx fartSound, splatSound;                 // real slaps; a random one each time
+        readonly Random sndRng = new Random();
         readonly Queue<KeyValuePair<int, Point>> dragTrail = new Queue<KeyValuePair<int, Point>>();
         bool leftDown, dragging; Point dragStart, winStart;
         ContextMenuStrip menu;
@@ -127,7 +129,10 @@ namespace BigBootyCheems
             using (var s = Res("HalfB.png")) using (var raw = new Bitmap(s)) srcHalf = LoadArt(raw);
             using (var s = Res("Blink.png")) using (var raw = new Bitmap(s)) srcShut = LoadArt(raw);
             src = srcOpen;
-            whip = new Sfx(Res("whip.wav"));
+            WhipSound = new Sfx(Res("whip.wav"));
+            fartSound = new Sfx(Res("fart.wav")); splatSound = new Sfx(Res("splat.wav"));
+            slapSounds = new Sfx[6];
+            for (int i = 0; i < slapSounds.Length; i++) slapSounds[i] = new Sfx(Res("slap" + (i + 1) + ".wav"));
 
             cw = w + 2 * Tune.Pad; ch = h + 2 * Tune.Pad;
             outPx = new int[cw * ch];
@@ -295,7 +300,7 @@ namespace BigBootyCheems
         void DoSlap(int sx, int sy) { DoSlap(sx, sy, 0, 1f); }
 
         // dir: -1 push left, +1 push right, 0 = work it out from which side was hit. power scales the push.
-        void DoSlap(int sx, int sy, float dir, float power) { DoSlap(sx, sy, dir, power, whip); }
+        void DoSlap(int sx, int sy, float dir, float power) { DoSlap(sx, sy, dir, power, null); }
 
         void DoSlap(int sx, int sy, float dir, float power, Sfx sound)
         {
@@ -311,7 +316,13 @@ namespace BigBootyCheems
             if (amp < 4) amp = 4;
             slaps.Add(new Slap { X = lx, Y = ly, Dir = dir, Amp = amp, T0 = now });
             if (slaps.Count > 4) slaps.RemoveAt(0);
-            try { sound.Play(); } catch { }
+            // null = a hand-style slap: a random take, louder the harder the hit
+            try
+            {
+                if (sound != null) sound.Play();
+                else slapSounds[sndRng.Next(slapSounds.Length)].Play(Math.Max(0.45f, Math.Min(1f, 0.5f + 0.32f * power)));
+            }
+            catch { }
             Flinch(power);
             timer.Start();
             Render();
@@ -322,6 +333,8 @@ namespace BigBootyCheems
 
         void Spray()
         {
+            Mixer.Warm();
+            fartSound.Play();
             // fire from deep inside the butt, low down; the spray layer sits *behind* the cheems,
             // so the stream emerges from under the art instead of appearing in mid-air
             var emit = new Point(winX + Tune.Pad + (int)((Tune.ButtCX + Tune.ButtRX * 0.30f) * Tune.Scale),
@@ -337,6 +350,7 @@ namespace BigBootyCheems
                 sp.Hole = new Rectangle(winX, winY, cw, ch);
                 sp.FrameReady = SprayFrame;
                 sp.FormClosed += (s2, e2) => { if (spray == sp) { spray = null; Render(); } };   // wipe any leftover liquid from our window
+                sp.WallHit = () => splatSound.Play(0.85f);
                 sp.Show();
                 Native.SetWindowPos(sp.Handle, Handle, 0, 0, 0, 0, 0x1 | 0x2 | 0x10);   // just below us (NOSIZE|NOMOVE|NOACTIVATE)
             }

@@ -90,7 +90,7 @@ namespace BigBootyCheems
         {
             if (Environment.GetEnvironmentVariable("BBC_LOG") == "1")
                 System.IO.File.AppendAllText("hits.log", Environment.TickCount + " hit " + p + " dir " + dir + " pow " + power + "\r\n");
-            DoSlap((int)p.X, (int)p.Y, dir, power, sound ?? whip);
+            DoSlap((int)p.X, (int)p.Y, dir, power, sound);   // null = the regular slap sounds
         }
 
         // a heavy blow squashes the whole body down for a moment, on top of the slap wobble
@@ -477,7 +477,7 @@ namespace BigBootyCheems
                         float spi = (float)Math.Sqrt(vxi * vxi + vyi * vyi);
                         if (spi < 1100 || !owner.ToolTouches(new PointF(px[i], py[i]))) continue;
                         float power = 0.7f + 0.8f * RigidTool.Clamp((spi - 1100) / 2600f, 0, 1);
-                        owner.ToolHit(new PointF(px[i], py[i]), Math.Sign(vxi), power, null);
+                        owner.ToolHit(new PointF(px[i], py[i]), Math.Sign(vxi), power, owner.WhipSound);
                         lastHit = now;
                         break;
                     }
@@ -602,7 +602,7 @@ namespace BigBootyCheems
                 {
                     // the more tails that land, the harder it hits
                     float power = (0.45f + 0.07f * hits) + 0.5f * RigidTool.Clamp((best - 650) / 2500f, 0, 1);
-                    owner.ToolHit(new PointF(hxs / hits, hys / hits), Math.Sign(hvx), power, null);   // the plain slap sound
+                    owner.ToolHit(new PointF(hxs / hits, hys / hits), Math.Sign(hvx), power, owner.WhipSound);   // leather lash
                     lastHit = now;
                 }
             }

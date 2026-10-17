@@ -43,6 +43,8 @@ namespace BigBootyCheems
         // so this overlay leaves that rectangle empty. FrameReady lets the cheems redraw in lock-step.
         public Rectangle Hole;
         public Action FrameReady;
+        public Action WallHit;                            // first splat on the wall of each burst
+        bool splatted;
         public int[] Pixels { get { return px; } }
         // where the liquid is this frame, in screen coordinates (empty when there's none)
         public Rectangle LiquidRect { get { return dirtyX1 > dirtyX0 && dirtyY1 > dirtyY0 ? new Rectangle(left + dirtyX0, top + dirtyY0, dirtyX1 - dirtyX0, dirtyY1 - dirtyY0) : Rectangle.Empty; } }
@@ -121,7 +123,7 @@ namespace BigBootyCheems
 
         public void Again(Point emit)
         {
-            emitX = emit.X; emitY = emit.Y; emitted = 0;
+            emitX = emit.X; emitY = emit.Y; emitted = 0; splatted = false;
             burstTick = startTick = Environment.TickCount;     // restarts the emission and the fade-out clock
         }
 
@@ -193,7 +195,11 @@ namespace BigBootyCheems
                                 vx[i] = -Rand(120, 380); vy[i] = -Rand(80, 320); r[i] *= 0.55f;
                                 x[i] -= 4;
                             }
-                            else { state[i] = 2; vx[i] = 0; vy[i] = vy[i] * 0.2f + Rand(-260, 260); r[i] *= 1.25f; }   // splat spreads up and down
+                            else
+                            {
+                                if (!splatted) { splatted = true; if (WallHit != null) WallHit(); }
+                                state[i] = 2; vx[i] = 0; vy[i] = vy[i] * 0.2f + Rand(-260, 260); r[i] *= 1.25f;
+                            }   // splat spreads up and down
                         }
                         else if (y[i] >= floorY - r[i] * 0.5f) { state[i] = 3; y[i] = floorY - r[i] * 0.5f; vy[i] = 0; vx[i] *= 0.25f; }
                         else if (x[i] < left - 40 || y[i] > floorY + 40) state[i] = 0;

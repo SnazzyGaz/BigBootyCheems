@@ -15,8 +15,9 @@ A standalone Windows app. **No installer, no admin rights.**
 - 😑 Blinks, breathes, sways, and screws his eyes shut when slapped
 - 🔁 Random idles now and then (clench, twerk), never while you're busy with him
 - 💩 Poke his belly 5 times quickly and... he sprays the wall
-- 🔊 Low-latency slap sounds
+- 🔊 Real, low-latency slap sounds (a random take each time, louder the harder you hit)
 - 🪶 One exe with everything built in
+- 🔄 Built-in updater: *Check for updates...* in the menu fetches the latest release and swaps itself in place
 
 ## Download
 
@@ -33,7 +34,7 @@ Windows SmartScreen may warn you the first time because the exe isn't code-signe
 | Rest the cursor on the butt | It starts to thrust |
 | Poke the belly 5 times quickly | 💩 |
 | Left-drag | Move him (the butt lags behind and jiggles when you let go) |
-| Right-click | Menu: headgear, face, top, shoes, tools, idle motion, random idles, exit |
+| Right-click | Menu: headgear, face, top, shoes, tools, idle motion, random idles, check for updates, exit |
 | Tools → pick one | It appears on the floor next to him. Press and hold to pick it up, swing, let go to drop. Pick it in the menu again to put it away. |
 
 ## Is it safe?
@@ -41,7 +42,7 @@ Windows SmartScreen may warn you the first time because the exe isn't code-signe
 Treat any random exe from the internet with suspicion. This project tries to make checking easy:
 
 - **The source is short and readable:** everything is in [`src/`](src).
-- **It doesn't go online at all.**
+- **It only goes online when you ask it to.** The one network feature is *Check for updates...* in the right-click menu. It contacts `api.github.com` for this repo's latest release and nothing else. It never checks on its own. An update is only installed if you click Yes, and only if the downloaded exe matches the SHA-256 hash published with the release.
 - **No admin rights, no installer, no background services.**
 - **It never reads your keyboard.** It only looks at where the mouse is.
 - **It only writes one file:** its settings (which outfit you picked), in `%APPDATA%\BigBootyCheems\settings.ini`.
@@ -77,6 +78,14 @@ build.bat
 
 The output is `dist\BigBootyCheems.exe`. Everything in `art\` (pictures and sounds) is embedded into the exe at build time.
 
+### Adding clothes
+
+Drop a PNG into `art\` with a slot prefix and rebuild:
+
+- `Hat_<name>.png`, `Face_<name>.png`, `Top_<name>.png` or `Shoes_<name>.png`
+- Draw it on the hero canvas (450×674), or on the clothes canvas (450×732, the hero sits 58 px down). Either works.
+- For a two-frame animation, add `<name>2.png` alongside it (like the propeller hat).
+
 ## Uninstall
 
 Right-click → *Exit*, then delete `BigBootyCheems.exe` and the `%APPDATA%\BigBootyCheems` folder.
@@ -85,4 +94,6 @@ Right-click → *Exit*, then delete `BigBootyCheems.exe` and the `%APPDATA%\BigB
 
 - App, clothing and tool art by MintyDoge.
 - The Cheems photo is of Balltze, the Shiba Inu behind the meme.
+- Slap sounds cut from ["Hand Clap / High Five / Realistic Slap"](https://freesound.org/people/olehenriksen/sounds/771247/) by olehenriksen (CC0).
+- Fart and splat cut from ["Wet Fart"](https://freesound.org/people/james.luib/sounds/818387/) by james.luib (CC0).
 - The code is MIT licensed (see [LICENSE](LICENSE)). The images and sounds in `art/` are **not** covered by the MIT licence.
