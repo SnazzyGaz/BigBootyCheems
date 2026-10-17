@@ -29,7 +29,7 @@ namespace BigBootyCheems
 
         // overlay geometry (screen)
         int left, top, ow, oh, wallX, floorY;
-        float emitX, emitY, emitted;
+        float emitX, emitY, emitted, prevEmitX, prevEmitY;
         int startTick, lastTick, burstTick;
 
         // field + output
@@ -68,14 +68,15 @@ namespace BigBootyCheems
         }
         double tA;
 
-        public SprayOverlay(Point emit, Screen screen)
+        public SprayOverlay(Point emit, Screen screen) : this(emit, screen, false) { }
+        public SprayOverlay(Point emit, Screen screen, bool wide)
         {
             FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; StartPosition = FormStartPosition.Manual;
             var wa = screen.WorkingArea;
             wallX = screen.Bounds.Right;                 // the monitor's right edge
             floorY = wa.Bottom;                          // land on top of the taskbar
-            emitX = emit.X; emitY = emit.Y;
-            left = Math.Max(screen.Bounds.Left, emit.X - 120);
+            emitX = prevEmitX = emit.X; emitY = prevEmitY = emit.Y;
+            left = wide ? screen.Bounds.Left : Math.Max(screen.Bounds.Left, emit.X - 120);
             top = screen.Bounds.Top;
             ow = Math.Max(40, wallX - left); oh = Math.Max(40, floorY - top);
             fw = ow / Cell + 2; fh = oh / Cell + 2;
@@ -121,9 +122,11 @@ namespace BigBootyCheems
         // another burst while the last one is still on screen: works if it comes from inside this overlay
         public bool CanEmitFrom(Point p) { return !IsDisposed && p.X >= left + 20 && p.X < wallX - 20 && p.Y >= top && p.Y < floorY; }
 
+        public void SetEmit(Point p) { emitX = p.X; emitY = p.Y; }   // a moving source (he's skating away)
+
         public void Again(Point emit)
         {
-            emitX = emit.X; emitY = emit.Y; emitted = 0; splatted = false;
+            emitX = prevEmitX = emit.X; emitY = prevEmitY = emit.Y; emitted = 0; splatted = false;
             burstTick = startTick = Environment.TickCount;     // restarts the emission and the fade-out clock
         }
 
@@ -162,7 +165,10 @@ namespace BigBootyCheems
                 // spread this frame's drops along the path they'd have covered since last frame,
                 // so the stream stays joined to the butt instead of leaving a gap
                 float tau = (float)k / Math.Max(1, n) * dt + Rand(0, dt / Math.Max(1, n));
-                x[i] = emitX + Rand(-3, 3) + vx[i] * tau; y[i] = emitY + Rand(-6, 6) + vy[i] * tau + 0.5f * Gravity * tau * tau;
+                // if the source moved since last frame, lay this frame's drops along its path too (no gaps)
+                float u = Math.Min(1f, tau / dt);                 // how far back along the source's path
+                float sx0 = emitX - (emitX - prevEmitX) * u, sy0 = emitY - (emitY - prevEmitY) * u;
+                x[i] = sx0 + Rand(-3, 3) + vx[i] * tau; y[i] = sy0 + Rand(-6, 6) + vy[i] * tau + 0.5f * Gravity * tau * tau;
                 vy[i] += Gravity * tau;
                 r[i] = Rand(3.5f, 7.5f);
                 slide[i] = rng.NextDouble() < 0.15 ? Rand(80, 150) : Rand(8, 38);     // slow slump, a few runny drips
@@ -222,6 +228,7 @@ namespace BigBootyCheems
                 float want = Math.Min(EmitSecs, bage) * EmitRate;
                 int n = (int)(want - emitted); if (n > 0) { Emit(n, dt); emitted += n; }
             }
+            prevEmitX = emitX; prevEmitY = emitY;
 
             float fade = age < FadeAfter ? 1f : Math.Max(0f, 1f - (age - FadeAfter) / FadeOver);
             if (fade <= 0f) { Finished = true; Close(); return; }

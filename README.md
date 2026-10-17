@@ -15,6 +15,7 @@ A standalone Windows app. **No installer, no admin rights.**
 - 😑 Blinks, breathes, sways, and screws his eyes shut when slapped
 - 🔁 Random idles now and then (clench, twerk), never while you're busy with him
 - 💩 Poke his belly 5 times quickly and... he sprays the wall
+- 🎭 Secret outfit combos: some full outfits change what happens when he poops (or when he's slapped). Try the Saiyan kit first.
 - 🔊 Real, low-latency slap sounds (a random take each time, louder the harder you hit)
 - 🪶 One exe with everything built in
 - 🔄 Built-in updater: *Check for updates...* in the menu fetches the latest release and swaps itself in place
@@ -78,6 +79,13 @@ build.bat
 
 The output is `dist\BigBootyCheems.exe`. Everything in `art\` (pictures and sounds) is embedded into the exe at build time.
 
+### Adding clothes
+
+Drop a PNG into `art\` with a slot prefix and rebuild:
+
+- `Hat_<name>.png`, `Face_<name>.png`, `Top_<name>.png` or `Shoes_<name>.png`
+- Draw it on the hero canvas (450×674), or on the clothes canvas (450×732, the hero sits 58 px down). Either works.
+- For a two-frame animation, add `<name>2.png` alongside it (like the propeller hat).
 
 ## Uninstall
 

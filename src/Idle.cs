@@ -67,6 +67,8 @@ namespace BigBootyCheems
         void IdleTick()
         {
             int now = Environment.TickCount;
+            SsjTick(now);
+            FxTick(now);
             if (breathing && !timer.Enabled) timer.Start();
             UpdateHover(now);
             UpdateBlink(now);

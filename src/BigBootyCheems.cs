@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Big Booty Cheems")]
 [assembly: AssemblyProduct("Big Booty Cheems")]
-[assembly: AssemblyVersion("1.0.4.0")]
+[assembly: AssemblyVersion("1.0.11.0")]
 
 namespace BigBootyCheems
 {
@@ -100,7 +100,7 @@ namespace BigBootyCheems
         public const int SwipeCooldownMs = 220;     // so one swipe = one slap
     }
 
-    class Slap { public float X, Y, Dir, Amp; public int T0; }
+    class Slap { public float X, Y, Dir, Amp, DecayMul = 1f; public int T0; }
 
     partial class Buddy : Form
     {
@@ -153,7 +153,7 @@ namespace BigBootyCheems
             {
                 UpdateInertia();
                 int now = Environment.TickCount;
-                if (slaps.Count > 0 || InertiaActive || IdleBusy) Render();
+                if (slaps.Count > 0 || InertiaActive || IdleBusy || ssj || FxActive) Render();
                 else if (breathing) { if (now - lastBreathRender >= 45) { lastBreathRender = now; Render(); } }
                 else timer.Stop();
             };
@@ -311,11 +311,13 @@ namespace BigBootyCheems
             float cx = Tune.ButtCX * Tune.Scale;
             if (dir == 0) dir = lx >= cx ? -1 : 1;
             float carried = 0;
-            foreach (var p in slaps) carried += p.Amp * (float)Math.Exp(-(now - p.T0) / 1000f / Tune.Decay);
+            foreach (var p in slaps) carried += p.Amp * (float)Math.Exp(-(now - p.T0) / 1000f / (Tune.Decay * p.DecayMul));
             float amp = Math.Min(Tune.MaxAmp - carried * 0.5f, Tune.Amp * power);
             if (amp < 4) amp = 4;
-            slaps.Add(new Slap { X = lx, Y = ly, Dir = dir, Amp = amp, T0 = now });
+            var slap = new Slap { X = lx, Y = ly, Dir = dir, Amp = amp, T0 = now };
+            slaps.Add(slap);
             if (slaps.Count > 4) slaps.RemoveAt(0);
+            if (CurrentOutfit == Outfit.Leather) { slap.DecayMul = 1.9f; Hearts(sx, sy, power); }   // he likes it
             // null = a hand-style slap: a random take, louder the harder the hit
             try
             {
@@ -334,18 +336,32 @@ namespace BigBootyCheems
         void Spray()
         {
             Mixer.Warm();
-            fartSound.Play();
+            var outfit = CurrentOutfit;
+            if (outfit == Outfit.Saiyan)
+            {
+                // a true Saiyan doesn't poop: he powers up instead (a little clench as he strains)
+                StartSsj();
+                StartMove(MoveKind.Clench, 0.9f, 1f);
+                timer.Start();
+                return;
+            }
             // fire from deep inside the butt, low down; the spray layer sits *behind* the cheems,
             // so the stream emerges from under the art instead of appearing in mid-air
-            var emit = new Point(winX + Tune.Pad + (int)((Tune.ButtCX + Tune.ButtRX * 0.30f) * Tune.Scale),
-                                 winY + Tune.Pad + (int)((Tune.ButtCY + Tune.ButtRY * 0.38f) * Tune.Scale));
-            if (spray != null && !spray.IsDisposed && spray.CanEmitFrom(emit))
+            var emit = ButtHole();
+            if (CostumePoop(outfit, emit)) { timer.Start(); return; }
+            fartSound.Play();
+            bool wide = outfit == Outfit.Jet;      // he'll shoot off left: the liquid layer needs the whole width
+            var scr = Screen.FromPoint(emit);
+            if (spray != null && !spray.IsDisposed && spray.CanEmitFrom(emit) && (!wide || spray.OverlayLeft == scr.Bounds.Left))
+            {
                 spray.Again(emit);       // more on top of what's already there
+                Native.SetWindowPos(spray.Handle, Handle, 0, 0, 0, 0, 0x1 | 0x2 | 0x10);   // make sure it's still just below us
+            }
             else
             {
                 // first one, or he's moved somewhere the old splatter can't reach: start fresh
                 if (spray != null && !spray.IsDisposed) spray.Close();
-                var sp = new SprayOverlay(emit, Screen.FromPoint(emit));
+                var sp = new SprayOverlay(emit, scr, wide);
                 spray = sp;
                 sp.Hole = new Rectangle(winX, winY, cw, ch);
                 sp.FrameReady = SprayFrame;
@@ -354,6 +370,9 @@ namespace BigBootyCheems
                 sp.Show();
                 Native.SetWindowPos(sp.Handle, Handle, 0, 0, 0, 0, 0x1 | 0x2 | 0x10);   // just below us (NOSIZE|NOMOVE|NOACTIVATE)
             }
+            if (outfit == Outfit.Builder) CordonOff(emit, spray);
+            if (outfit == Outfit.Cop) StartCop();
+            if (outfit == Outfit.Jet) StartJet();
             // recoil: the cheeks get a squishy kick, no whip sound
             int now = Environment.TickCount;
             slaps.Add(new Slap { X = emit.X - winX - Tune.Pad - 6, Y = emit.Y - winY - Tune.Pad, Dir = -1, Amp = Tune.Amp * 0.8f, T0 = now });
@@ -363,10 +382,24 @@ namespace BigBootyCheems
         // liquid inside our window goes *behind* the art: out = art over liquid (premultiplied)
         bool CompositeSpray()
         {
-            if (spray == null || spray.IsDisposed || dragging) return false;
+            if (spray == null || spray.IsDisposed || Detached) return false;
             if (!spray.LiquidRect.IntersectsWith(new Rectangle(winX, winY, cw, ch))) return false;
+            return CompositeUnder(spray.Pixels, spray.OverlayLeft, spray.OverlayTop, spray.OverlayWidth, spray.OverlayHeight);
+        }
+
+        bool CompositeFx()
+        {
+            var f = fxUnder;
+            if (f == null || f.IsDisposed || Detached) return false;
+            if (!f.DrawnRect.IntersectsWith(new Rectangle(winX, winY, cw, ch))) return false;
+            var b = f.ScreenBounds;
+            return CompositeUnder(f.Pixels, b.Left, b.Top, f.Width, f.Height);
+        }
+
+        // a layer's pixels (screen-placed at L,T) behind our art
+        bool CompositeUnder(int[] lp, int L, int T, int LW, int LH)
+        {
             bool any = false;
-            int[] lp = spray.Pixels; int L = spray.OverlayLeft, T = spray.OverlayTop, LW = spray.OverlayWidth, LH = spray.OverlayHeight;
             int x0 = Math.Max(0, L - winX), x1 = Math.Min(cw, L + LW - winX);
             int y0 = Math.Max(0, T - winY), y1 = Math.Min(ch, T + LH - winY);
             for (int y = y0; y < y1; y++)
@@ -492,13 +525,16 @@ namespace BigBootyCheems
         void Render()
         {
             int now = Environment.TickCount;
-            slaps.RemoveAll(p => (now - p.T0) > Tune.Decay * 1000 * 6);
+            slaps.RemoveAll(p => (now - p.T0) > Tune.Decay * p.DecayMul * 1000 * 6);
             PrepareMoves(now);
             bool wobbling = slaps.Count > 0 || InertiaActive || MovesActive || bScale != 0;
             if (artPx == null) artPx = new int[cw * ch];
             if (wobbling || !artValid) { WarpArt(now); CompositeHat(); artValid = !wobbling; }
             Array.Copy(artPx, outPx, outPx.Length);
+            DrawSsj(outPx);
+            DrawCop(outPx);
             hadLiquid = CompositeSpray();
+            hadFx = CompositeFx();
             Marshal.Copy(outPx, 0, bits, outPx.Length);
             Push();
         }
@@ -509,7 +545,7 @@ namespace BigBootyCheems
             if (spray == null) return;
             // while carried, the overlay draws all the liquid itself (it sits just below us) so
             // nothing has to stay in step with a moving window
-            if (dragging) { spray.Hole = Rectangle.Empty; return; }
+            if (Detached) { spray.Hole = Rectangle.Empty; return; }
             spray.Hole = new Rectangle(winX, winY, cw, ch);
             bool near = spray.LiquidRect.IntersectsWith(spray.Hole);
             if (near || hadLiquid || slaps.Count > 0) Render();
@@ -526,7 +562,7 @@ namespace BigBootyCheems
             {
                 float t = (now - live[i].T0) / 1000f;
                 if (t < 0) { env[i] = 0; continue; }   // scheduled for later
-                env[i] = live[i].Amp * (float)Math.Exp(-t / Tune.Decay) * Math.Min(1f, t / 0.03f);  // 30 ms attack: the hit
+                env[i] = live[i].Amp * (float)Math.Exp(-t / (Tune.Decay * live[i].DecayMul)) * Math.Min(1f, t / 0.03f);  // 30 ms attack: the hit
                 ph[i] = w2 * t;
             }
             float inv2s2 = 1f / (2 * Tune.Spread * Tune.Spread);
@@ -673,6 +709,7 @@ namespace BigBootyCheems
             {
                 dragging = true;
                 if (spray != null && !spray.IsDisposed) { spray.Hole = Rectangle.Empty; spray.RePush(); Render(); }   // liquid out of our window
+                if (fxUnder != null && !fxUnder.IsDisposed) { fxUnder.Hole = Rectangle.Empty; fxUnder.RePush(); Render(); }
             }
             if (dragging)
             {
@@ -712,6 +749,7 @@ namespace BigBootyCheems
                     // back to drawing the liquid behind our own art
                     Render(); spray.Hole = new Rectangle(winX, winY, cw, ch); spray.RePush();
                 }
+                if (wasDragging && fxUnder != null && !fxUnder.IsDisposed) { Render(); fxUnder.Hole = new Rectangle(winX, winY, cw, ch); fxUnder.RePush(); }
             }
             else if (e.Button == MouseButtons.Right) ShowMenu();
         }
