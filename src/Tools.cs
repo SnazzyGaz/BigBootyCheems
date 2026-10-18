@@ -104,7 +104,7 @@ namespace BigBootyCheems
         protected readonly int S;                 // window is S x S, centred on the hand
         protected float hx, hy, vx, vy;           // hand point (screen) and its velocity
         protected bool held, resting = true;
-        protected int lastTick, lastHit;
+        protected int lastTick, lastHit = Environment.TickCount - 3600000;
         readonly Queue<KeyValuePair<int, PointF>> trail = new Queue<KeyValuePair<int, PointF>>();
         IntPtr memDC, dib, bits; Bitmap bmp;
         readonly System.Windows.Forms.Timer timer;

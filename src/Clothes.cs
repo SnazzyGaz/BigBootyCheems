@@ -141,7 +141,7 @@ namespace BigBootyCheems
         }
 
         // two-frame items (the propeller hat) flip frames continuously
-        int lastSpinFlip;
+        int lastSpinFlip = Environment.TickCount - 3600000;
         void AnimateClothes(int now)
         {
             bool any = false;

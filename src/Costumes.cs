@@ -233,7 +233,7 @@ namespace BigBootyCheems
         }
 
         // ---------------------------------------------------------- cop lights
-        int copStart = -100000; const int CopMs = 4500;
+        int copStart = Environment.TickCount - 3600000; const int CopMs = 4500;
         bool CopOn { get { return Environment.TickCount - copStart < CopMs; } }
 
         void StartCop()
@@ -288,7 +288,7 @@ namespace BigBootyCheems
         static int[] signSpr, tapeSpr;
         const int SignW = 76, SignH = 130, TapeW = 300, TapeH = 170, TapeStrip = 28;
 
-        int cordonTick = -100000;
+        int cordonTick = Environment.TickCount - 3600000;
         void CordonOff(Point e, SprayOverlay sp)
         {
             int now = Environment.TickCount;

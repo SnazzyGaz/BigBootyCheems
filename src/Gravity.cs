@@ -11,7 +11,7 @@ namespace BigBootyCheems
         bool gravity = true, flying, astroFlight;
         int astroStart;
         float flyX, flyY, flyVX, flyVY;
-        int lastBonk;
+        int lastBonk = Environment.TickCount - 3600000;
         ToolStripMenuItem gravityItem;
         const float G = 2600f;
 

@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Big Booty Cheems")]
 [assembly: AssemblyProduct("Big Booty Cheems")]
-[assembly: AssemblyVersion("1.0.22.0")]
+[assembly: AssemblyVersion("1.0.23.0")]
 
 namespace BigBootyCheems
 {
@@ -460,7 +460,9 @@ namespace BigBootyCheems
         }
 
         // ---------------------------------------------------------- swipe detection (polled, so fast swipes can't skip past)
-        int lastSlapTick, lastPollTick; Point lastPoll;
+        // Environment.TickCount goes negative after ~25 days of uptime, so every "last time" starts an hour ago,
+        // never at 0 (0 would look like the future and freeze things, like his eyes shut)
+        int lastSlapTick = Environment.TickCount - 3600000, lastPollTick; Point lastPoll;
         // recent cursor samples, so speed is measured over ~50 ms rather than between two (possibly bunched-up) polls
         readonly Queue<KeyValuePair<int, Point>> trail = new Queue<KeyValuePair<int, Point>>();
 
@@ -497,7 +499,7 @@ namespace BigBootyCheems
         }
 
         // ---------------------------------------------------------- belly pokes
-        int pokes, lastPoke;
+        int pokes, lastPoke = Environment.TickCount - 3600000;
 
         bool InBelly(Point screen)
         {

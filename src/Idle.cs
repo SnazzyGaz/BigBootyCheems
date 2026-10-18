@@ -21,7 +21,7 @@ namespace BigBootyCheems
         readonly List<Move> moves = new List<Move>();
         readonly Random rng = new Random();
         bool breathing = true, autoIdle = true;
-        int breathT0 = Environment.TickCount, lastBreathRender, nextIdleTick;
+        int breathT0 = Environment.TickCount, lastBreathRender = Environment.TickCount - 3600000, nextIdleTick;
         ToolStripMenuItem breathItem, autoItem;
 
         // ---------------------------------------------------------- menu + timers
@@ -138,7 +138,7 @@ namespace BigBootyCheems
         }
 
         // a slap on the butt makes him screw his eyes shut for a moment
-        int flinchUntil;
+        int flinchUntil = Environment.TickCount;
         void Flinch(float power) { flinchUntil = Environment.TickCount + 380 + (int)(220 * Math.Min(1.5f, power)); }
 
         bool IdleBusy { get { return moves.Count > 0 || hoverLevel > 0; } }
@@ -155,7 +155,7 @@ namespace BigBootyCheems
         static float Ease(float t) { t = Math.Max(0, Math.Min(1, t)); return t * t * (3 - 2 * t); }
 
         // ---------------------------------------------------------- hover shimmy: the butt thrusts while the cursor rests on it
-        float hoverLevel; int lastHoverTick, hoverSince, shimmyT0;
+        float hoverLevel; int lastHoverTick, hoverSince, shimmyT0 = Environment.TickCount;
         void UpdateHover(int now)
         {
             float dt = lastHoverTick == 0 ? 0.015f : Math.Min(0.05f, (now - lastHoverTick) / 1000f);

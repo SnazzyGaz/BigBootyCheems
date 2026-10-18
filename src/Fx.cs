@@ -33,7 +33,7 @@ namespace BigBootyCheems
         int lastTick;
         readonly Random rng = new Random();
         public Action Ricochet;             // a bouncing particle hit an edge hard
-        int lastRicochet;
+        int lastRicochet = Environment.TickCount - 3600000;
 
         readonly IntPtr below;              // sit just under this window (the cheems), or on top of everything
 
