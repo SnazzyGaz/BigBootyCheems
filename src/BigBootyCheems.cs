@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Big Booty Cheems")]
 [assembly: AssemblyProduct("Big Booty Cheems")]
-[assembly: AssemblyVersion("1.0.13.0")]
+[assembly: AssemblyVersion("1.0.16.0")]
 
 namespace BigBootyCheems
 {
@@ -69,6 +69,7 @@ namespace BigBootyCheems
     // ---------------------------------------------------------------- tuning (in base-art pixels unless noted)
     static class Tune
     {
+        public const int FeetSink = 20;             // his feet sit this far down into the taskbar, so he looks planted
         public const float Scale = 0.42f;           // base canvas 450x732 -> ~189x307 on screen
         // the hero art is 450x674; clothes use a canvas extended 58 px upwards, so the hero sits that far down
         public const int CanvasW = 450, CanvasH = 732, HeroTop = 58;
@@ -140,7 +141,7 @@ namespace BigBootyCheems
             outPx = new int[cw * ch];
             CreateBuffer();
             var wa = Screen.PrimaryScreen.WorkingArea;
-            winX = wa.Right - cw - 300; winY = wa.Bottom - ch + Tune.Pad;   // feet on the taskbar
+            winX = wa.Right - cw - 300; winY = wa.Bottom - ch + Tune.Pad + Tune.FeetSink;   // feet on the taskbar
             Location = new Point(winX, winY); Size = new Size(cw, ch);
 
             menu = new ContextMenuStrip();
@@ -162,6 +163,7 @@ namespace BigBootyCheems
             poll = new System.Windows.Forms.Timer { Interval = 15 };
             poll.Tick += (s, e) => { PollSwipe(); IdleTick(); };
             SetupIdle();
+            SetupGravity();
             SetupTools();
             SetupClothes();
             foreach (ToolStripItem it in menu.Items)
@@ -327,7 +329,7 @@ namespace BigBootyCheems
                 else slapSounds[sndRng.Next(slapSounds.Length)].Play(Math.Max(0.45f, Math.Min(1f, 0.5f + 0.32f * power)));
             }
             catch { }
-            Flinch(power);
+            if (sndRng.NextDouble() < 0.10) Flinch(power);    // eyes screwed shut: only now and then
             timer.Start();
             Render();
         }
@@ -742,15 +744,16 @@ namespace BigBootyCheems
                 if (dragging)
                 {
                     // how fast it was moving when let go (cursor still for a while = gentle drop)
-                    float speed = 0; int now = Environment.TickCount;
+                    float speed = 0, tvx = 0, tvy = 0; int now = Environment.TickCount;
                     while (dragTrail.Count > 0 && now - dragTrail.Peek().Key > 120) dragTrail.Dequeue();
                     if (dragTrail.Count > 0)
                     {
                         var o = dragTrail.Peek(); var c = Cursor.Position; int span = Math.Max(16, now - o.Key);
-                        speed = (float)Math.Sqrt((c.X - o.Value.X) * (c.X - o.Value.X) + (c.Y - o.Value.Y) * (c.Y - o.Value.Y)) * 1000f / span;
+                        tvx = (c.X - o.Value.X) * 1000f / span; tvy = (c.Y - o.Value.Y) * 1000f / span;
+                        speed = (float)Math.Sqrt(tvx * tvx + tvy * tvy);
                     }
                     dragTrail.Clear();
-                    Landed(speed);
+                    if (gravity) Throw(tvx, tvy); else Landed(speed);
                 }
                 bool wasDragging = dragging;
                 dragging = false;

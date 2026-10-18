@@ -382,9 +382,9 @@ namespace BigBootyCheems
         // ---------------------------------------------------------- per tick (from the idle poll)
         // while he's moving fast (carried, skating, floating) the layers under him draw everything
         // themselves: two windows can't move in perfect step, which showed as seams in the poop
-        bool Detached { get { return dragging || jetting || floating; } }
+        bool Detached { get { return dragging || jetting || floating || flying; } }
 
-        bool FxActive { get { return floating || jetting || CopOn; } }
+        bool FxActive { get { return floating || jetting || CopOn || flying; } }
 
         void FxTick(int now)
         {
@@ -392,6 +392,7 @@ namespace BigBootyCheems
             fxLastTick = now;
             FloatTick(now);
             JetTick(now, dt);
+            GravityTick(now, dt);
             if (FxActive && !timer.Enabled) timer.Start();
         }
     }

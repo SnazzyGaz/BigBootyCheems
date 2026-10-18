@@ -1,0 +1,105 @@
+// Gravity: he always ends up on the taskbar. Fling him and he flies, bounces off the screen edges
+// and lands with a cheek clap, then skids to a stop. On by default; can be turned off in the menu.
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+
+namespace BigBootyCheems
+{
+    partial class Buddy
+    {
+        bool gravity = true, flying;
+        float flyX, flyY, flyVX, flyVY;
+        int lastBonk;
+        ToolStripMenuItem gravityItem;
+        const float G = 2600f;
+
+        void SetupGravity()
+        {
+            gravity = LoadSetting("Gravity") != "0";
+            gravityItem = new ToolStripMenuItem("Gravity (throw him about)", null, (s, e) =>
+            {
+                gravity = !gravity; gravityItem.Checked = gravity; SaveSetting("Gravity", gravity ? "1" : "0");
+                if (!gravity) flying = false;
+            }) { Checked = gravity };
+            menu.Items.Insert(2, gravityItem);
+        }
+
+        // where his window sits when his feet are on the taskbar, and how far left/right he can go
+        Rectangle FlightArea()
+        {
+            var wa = Screen.FromRectangle(new Rectangle(winX, winY, cw, ch)).WorkingArea;
+            return Rectangle.FromLTRB(wa.Left - Tune.Pad, wa.Top - Tune.Pad, wa.Right - cw + Tune.Pad, wa.Bottom - ch + Tune.Pad + Tune.FeetSink);
+        }
+
+        // let go mid-drag: off he goes
+        void Throw(float vx, float vy)
+        {
+            float sp = (float)Math.Sqrt(vx * vx + vy * vy);
+            if (sp > 5000) { vx *= 5000 / sp; vy *= 5000 / sp; }
+            flyX = winX; flyY = winY; flyVX = vx; flyVY = vy;
+            flying = true;
+            timer.Start();
+        }
+
+        void GravityTick(int now, float dt)
+        {
+            if (!gravity || dragging || leftDown || floating || jetting) { if (dragging) flying = false; return; }
+            var a = FlightArea();
+            if (!flying)
+            {
+                if (winY < a.Bottom - 1) { flyX = winX; flyY = winY; flyVX = 0; flyVY = 0; flying = true; timer.Start(); }   // in mid-air: drop
+                else { if (winY > a.Bottom + 1) winY = a.Bottom; return; }
+            }
+            flyVY += G * dt;
+            flyVX *= 1 - 0.15f * dt;
+            flyX += flyVX * dt; flyY += flyVY * dt;
+            // walls: his butt is on the right, so the right wall is a proper cheek slap
+            if (flyX > a.Right) { flyX = a.Right; Bonk(Math.Abs(flyVX), true, now); flyVX = -flyVX * 0.55f; }
+            if (flyX < a.Left) { flyX = a.Left; Bonk(Math.Abs(flyVX), false, now); flyVX = -flyVX * 0.55f; }
+            if (flyY < a.Top) { flyY = a.Top; flyVY = Math.Abs(flyVY) * 0.4f; }
+            if (flyY >= a.Bottom)
+            {
+                flyY = a.Bottom;
+                float impact = flyVY;
+                if (impact > 260)
+                {
+                    // hits the deck: cheeks clap, a squash, and a bounce
+                    Clap(impact, now);
+                    Landed(Math.Min(4000, impact));
+                    flyVY = -impact * 0.38f;
+                }
+                else
+                {
+                    flyVY = 0;
+                    flyVX *= (float)Math.Exp(-7 * dt);              // skid to a stop
+                    if (Math.Abs(flyVX) < 25) { flyVX = 0; flying = false; }
+                }
+            }
+            winX = (int)Math.Round(flyX); winY = (int)Math.Round(flyY);
+        }
+
+        Point ButtCentre()
+        {
+            return new Point(winX + Tune.Pad + (int)(Tune.ButtCX * Tune.Scale), winY + Tune.Pad + (int)(Tune.ButtCY * Tune.Scale));
+        }
+
+        void Clap(float speed, int now)
+        {
+            if (now - lastBonk < 120) return;
+            lastBonk = now;
+            var b = ButtCentre();
+            DoSlap(b.X, b.Y + 10, 0, Math.Min(1.7f, 0.35f + speed / 1600f));
+        }
+
+        void Bonk(float speed, bool buttSide, int now)
+        {
+            if (speed < 250 || now - lastBonk < 120) return;
+            lastBonk = now;
+            var b = ButtCentre();
+            float p = Math.Min(1.7f, 0.3f + speed / 1800f);
+            if (buttSide) DoSlap(b.X + 20, b.Y, -1, p);             // butt into the wall
+            else DoSlap(b.X - 30, b.Y, 1, p * 0.6f);                 // face-first: the cheeks still slosh
+        }
+    }
+}

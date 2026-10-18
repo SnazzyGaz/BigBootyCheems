@@ -35,6 +35,7 @@ Windows SmartScreen may warn you the first time because the exe isn't code-signe
 | Rest the cursor on the butt | It starts to thrust |
 | Poke the belly 5 times quickly | 💩 |
 | Left-drag | Move him (the butt lags behind and jiggles when you let go) |
+| Drag and fling | He flies, bounces off the screen edges and lands on the taskbar with a cheek clap (turn off *Gravity* in the menu to leave him where you drop him) |
 | Right-click | Menu: headgear, face, top, shoes, tools, idle motion, random idles, check for updates, exit |
 | Tools → pick one | It appears on the floor next to him. Press and hold to pick it up, swing, let go to drop. Pick it in the menu again to put it away. |
 
