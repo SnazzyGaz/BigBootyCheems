@@ -29,6 +29,7 @@ namespace BigBootyCheems
         public void Play() { Play(1f); }
         public void Play(float gain)
         {
+            if (Mixer.Muted) return;
             if (Samples != null && Mixer.Play(Samples, gain)) return;
             try { fallback.Play(); } catch { }
         }
@@ -85,8 +86,11 @@ namespace BigBootyCheems
         static readonly int[] acc = new int[BufSamples];
 
         // keep (or get) the stream running; call while a hit is likely soon
+        public static volatile bool Muted;             // the menu's Sound switch
+
         public static void Warm()
         {
+            if (Muted) return;
             lastUse = Environment.TickCount;
             if (running || broken) return;
             lock (gate)
@@ -101,6 +105,7 @@ namespace BigBootyCheems
 
         public static bool Play(short[] s, float gain)
         {
+            if (Muted) return true;
             Warm();
             if (!running) return false;
             lock (gate)

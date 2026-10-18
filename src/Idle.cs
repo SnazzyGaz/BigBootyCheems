@@ -68,6 +68,7 @@ namespace BigBootyCheems
         {
             int now = Environment.TickCount;
             SsjTick(now);
+            StayAboveTaskbar(now);
             FxTick(now);
             if (breathing && !timer.Enabled) timer.Start();
             UpdateHover(now);
@@ -89,10 +90,11 @@ namespace BigBootyCheems
             {
                 ScheduleIdle();
                 if (Environment.GetEnvironmentVariable("BBC_LOG") == "1") System.IO.File.AppendAllText("idles.log", now + " idle\r\n");
-                // clench is the regular; twerk is a rarer treat
-                switch (rng.Next(5))
+                // clench is the regular; twerk and a little hop are rarer treats
+                switch (rng.Next(6))
                 {
                     case 0: StartMove(MoveKind.Twerk, 2.4f, 1f, true); break;
+                    case 1: Hop(); break;
                     default: StartMove(MoveKind.Clench, 1.0f, 1f, true); break;
                 }
             }

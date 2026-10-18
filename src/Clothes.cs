@@ -144,10 +144,23 @@ namespace BigBootyCheems
             // the spacesuit has its own boots: it hides whatever shoes are picked (they come back when it's off)
             bool suit = false;
             foreach (var sl in slots) if (sl.Key == "Top" && sl.Current == "spacesuit") suit = true;
-            for (int i = slots.Count - 1; i >= 0; i--)
-                if (slots[i].Warps && slots[i].Px != null && !(suit && slots[i].Key == "Shoes"))
-                    foreach (var f in new[] { srcOpen, srcHalf, srcShut }) Over(HairFor(slots[i], slots[i].Frame2 && slots[i].Px2 != null ? slots[i].Px2 : slots[i].Px), f, w, 0, 0);
+            // drawing order: shoes, top, face, hat. Eyewear sits on top of a hat's brim though (unless the hat
+            // is a helmet, which covers it), so then the face item goes last.
+            var order = new List<Slot>();
+            for (int i = slots.Count - 1; i >= 0; i--) order.Add(slots[i]);
+            Slot hatSlot = order.Find(x => x.Key == "Hat"), faceSlot = order.Find(x => x.Key == "Face");
+            if (hatSlot != null && faceSlot != null && IsEyewear(faceSlot.Current) && !IsHelmet(hatSlot.Current))
+            {
+                order.Remove(faceSlot); order.Add(faceSlot);
+            }
+            foreach (var sl in order)
+                if (sl.Warps && sl.Px != null && !(suit && sl.Key == "Shoes"))
+                    foreach (var f in new[] { srcOpen, srcHalf, srcShut }) Over(HairFor(sl, sl.Frame2 && sl.Px2 != null ? sl.Px2 : sl.Px), f, w, 0, 0);
         }
+
+        // named by file: anything with these words in it counts (so new art follows the rule automatically)
+        static bool IsEyewear(string n) { n = n.ToLower(); return n.Contains("glasses") || n.Contains("goggles") || n.Contains("visor") || n.Contains("scouter") || n.Contains("specs") || n.Contains("monocle"); }
+        static bool IsHelmet(string n) { return n.ToLower().Contains("helmet"); }
 
         // two-frame items (the propeller hat) flip frames continuously
         int lastSpinFlip = Environment.TickCount - 3600000;

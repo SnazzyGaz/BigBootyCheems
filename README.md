@@ -13,7 +13,7 @@ A standalone Windows app. **No installer, no admin rights.**
 - 🪃 Tools to whack it with: whip, cat o' nine tails, chancla, baseball bat and a wet fish. Pick one up, swing it, drop it anywhere.
 - 👒 Mix-and-match outfits: headgear, face, top and shoes, which move with his body
 - 😑 Blinks, breathes, sways, and screws his eyes shut when slapped
-- 🔁 Random idles now and then (clench, twerk), never while you're busy with him
+- 🔁 Random idles now and then (clench, twerk, a little hop), never while you're busy with him
 - 💩 Poke his belly 5 times quickly and... he sprays the wall
 - 🎭 Secret outfit combos: some full outfits change what happens when he poops (or when he's slapped). Try the Saiyan kit first.
 - 🔊 Real, low-latency slap sounds (a random take each time, louder the harder you hit)
@@ -36,7 +36,7 @@ Windows SmartScreen may warn you the first time because the exe isn't code-signe
 | Poke the belly 5 times quickly | 💩 |
 | Left-drag | Move him (the butt lags behind and jiggles when you let go) |
 | Drag and fling | He flies, bounces off the screen edges and lands on the taskbar with a cheek clap (turn off *Gravity* in the menu to leave him where you drop him) |
-| Right-click | Menu: headgear, face, top, shoes, tools, idle motion, random idles, check for updates, exit |
+| Right-click | Menu: headgear, face, top, shoes, tools, idle motion, random idles, gravity, sound on/off, check for updates, exit |
 | Tools → pick one | It appears on the floor next to him. Press and hold to pick it up, swing, let go to drop. Pick it in the menu again to put it away. |
 
 ## Is it safe?

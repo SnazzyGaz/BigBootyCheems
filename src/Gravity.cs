@@ -12,7 +12,8 @@ namespace BigBootyCheems
         int astroStart;
         float flyX, flyY, flyVX, flyVY;
         int lastBonk = Environment.TickCount - 3600000;
-        ToolStripMenuItem gravityItem;
+        ToolStripMenuItem gravityItem, soundItem;
+        bool hopping;          // a little idle hop: soft landing, no clap
         const float G = 2600f;
 
         void SetupGravity()
@@ -24,6 +25,12 @@ namespace BigBootyCheems
                 if (!gravity) flying = false;
             }) { Checked = gravity };
             menu.Items.Insert(2, gravityItem);
+            Mixer.Muted = LoadSetting("Sound") == "0";
+            soundItem = new ToolStripMenuItem("Sound", null, (s, e) =>
+            {
+                Mixer.Muted = !Mixer.Muted; soundItem.Checked = !Mixer.Muted; SaveSetting("Sound", Mixer.Muted ? "0" : "1");
+            }) { Checked = !Mixer.Muted };
+            menu.Items.Insert(3, soundItem);
         }
 
         // where his window sits when his feet are on the taskbar, and how far left/right he can go
@@ -45,7 +52,7 @@ namespace BigBootyCheems
 
         void GravityTick(int now, float dt)
         {
-            if ((!gravity && !astroFlight) || dragging || floating || jetting) { if (dragging) { flying = false; astroFlight = false; } return; }
+            if ((!gravity && !astroFlight && !hopping) || dragging || floating || jetting) { if (dragging) { flying = false; astroFlight = false; } return; }
             var a = FlightArea();
             if (!flying)
             {
@@ -75,7 +82,8 @@ namespace BigBootyCheems
             {
                 flyY = a.Bottom;
                 float impact = flyVY;
-                if (lowG && impact > 40) { astroFlight = false; Landed(380); flyVY = 0; }     // a soft moon landing
+                if (hopping) { hopping = false; flyVY = 0; flyVX = 0; flying = false; Landed(220); }
+                else if (lowG && impact > 40) { astroFlight = false; Landed(380); flyVY = 0; }     // a soft moon landing
                 else if (lowG) { astroFlight = false; flyVY = 0; flyVX *= (float)Math.Exp(-3 * dt); if (Math.Abs(flyVX) < 15) { flyVX = 0; flying = false; } }
                 else if (impact > 260)
                 {
@@ -92,6 +100,20 @@ namespace BigBootyCheems
                 }
             }
             winX = (int)Math.Round(flyX); winY = (int)Math.Round(flyY);
+        }
+
+        // a gentle hop a little way left or right (away from the screen edge if he's near one)
+        void Hop()
+        {
+            if (flying || floating || jetting || dragging) return;
+            var a = FlightArea();
+            if (winY < a.Bottom - 1) return;                       // only from the ground
+            float dir = rng.Next(2) == 0 ? -1 : 1;
+            if (winX - a.Left < 150) dir = 1; else if (a.Right - winX < 150) dir = -1;
+            flyX = winX; flyY = winY; flyVX = dir * (140 + rng.Next(90)); flyVY = -480 - rng.Next(120);
+            flying = true; hopping = true;
+            StartMove(MoveKind.Landing, 0.35f, 0.5f, true);     // a little crouch-spring as he goes
+            timer.Start();
         }
 
         void StartAstro()
@@ -119,6 +141,28 @@ namespace BigBootyCheems
                 });
         }
         int astroHitY;
+
+        // his feet sit a little into the taskbar; clicking the taskbar can lift it over them. Every half second,
+        // if the taskbar has ended up above us in the window stack, put us back on top.
+        int lastZCheck;
+        void StayAboveTaskbar(int now)
+        {
+            if (now - lastZCheck < 500 || !IsHandleCreated || dragging) return;
+            lastZCheck = now;
+            if (menu != null && menu.Visible) return;
+            var cls = new System.Text.StringBuilder(64);
+            IntPtr h = Native.GetWindow(Handle, 3);              // GW_HWNDPREV: the window just above us
+            for (int i = 0; i < 400 && h != IntPtr.Zero; i++, h = Native.GetWindow(h, 3))
+            {
+                cls.Length = 0; Native.GetClassName(h, cls, cls.Capacity);
+                string c = cls.ToString();
+                if (c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd")
+                {
+                    Native.SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 0x1 | 0x2 | 0x10);   // topmost again, no move/size/activate
+                    return;
+                }
+            }
+        }
 
         Point ButtCentre()
         {
