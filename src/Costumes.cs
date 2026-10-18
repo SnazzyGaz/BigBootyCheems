@@ -24,7 +24,7 @@ namespace BigBootyCheems
                 if (hat == "Policehat" && face == "sung") return Outfit.Cop;
                 if (hat == "Partyhat" && top == "hawa" && face == "sung") return Outfit.Party;
                 if (hat == "cb" && face == "bnda" && shoes == "boots") return Outfit.Outlaw;
-                if (hat == "Astro" && shoes != "") return Outfit.Astro;
+                if (hat == "Astro" && top == "spacesuit") return Outfit.Astro;
                 if (face == "Gasm") return Outfit.Gas;
                 if (shoes == "rollers") return Outfit.Jet;
                 if (hat == "pplr") return Outfit.Propeller;
@@ -85,7 +85,6 @@ namespace BigBootyCheems
             {
                 case Outfit.Party: PartyPoop(e); return true;
                 case Outfit.Gas: GasPoop(e); return true;
-                case Outfit.Astro: AstroPoop(e); return true;
                 case Outfit.Outlaw: OutlawPoop(e); return true;
                 case Outfit.Propeller: PropellerPoop(e); return true;
             }

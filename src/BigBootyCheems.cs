@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Big Booty Cheems")]
 [assembly: AssemblyProduct("Big Booty Cheems")]
-[assembly: AssemblyVersion("1.0.16.0")]
+[assembly: AssemblyVersion("1.0.22.0")]
 
 namespace BigBootyCheems
 {
@@ -362,7 +362,7 @@ namespace BigBootyCheems
             var emit = ButtHole();
             if (CostumePoop(outfit, emit)) { timer.Start(); return; }
             poopSound.Play();
-            bool wide = outfit == Outfit.Jet;      // he'll shoot off left: the liquid layer needs the whole width
+            bool wide = outfit == Outfit.Jet || outfit == Outfit.Astro;      // he'll shoot off left: the liquid layer needs the whole width
             var scr = Screen.FromPoint(emit);
             if (spray != null && !spray.IsDisposed && spray.CanEmitFrom(emit) && (!wide || spray.OverlayLeft == scr.Bounds.Left))
             {
@@ -378,13 +378,14 @@ namespace BigBootyCheems
                 sp.Hole = new Rectangle(winX, winY, cw, ch);
                 sp.FrameReady = SprayFrame;
                 sp.FormClosed += (s2, e2) => { if (spray == sp) { spray = null; Render(); } };   // wipe any leftover liquid from our window
-                sp.WallHit = () => splatSound.Play(0.85f);
+                sp.WallHit = OnWallHit;
                 sp.Show();
                 Native.SetWindowPos(sp.Handle, Handle, 0, 0, 0, 0, 0x1 | 0x2 | 0x10);   // just below us (NOSIZE|NOMOVE|NOACTIVATE)
             }
             if (outfit == Outfit.Builder) CordonOff(emit, spray);
             if (outfit == Outfit.Cop) StartCop();
             if (outfit == Outfit.Jet) StartJet();
+            if (outfit == Outfit.Astro) { astroHitY = emit.Y; StartAstro(); }
             // recoil: the cheeks get a squishy kick, no whip sound
             int now = Environment.TickCount;
             slaps.Add(new Slap { X = emit.X - winX - Tune.Pad - 6, Y = emit.Y - winY - Tune.Pad, Dir = -1, Amp = Tune.Amp * 0.8f, T0 = now });

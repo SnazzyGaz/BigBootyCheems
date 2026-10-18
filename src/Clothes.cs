@@ -34,7 +34,7 @@ namespace BigBootyCheems
             { "Hdres", "Headdress" }, { "Policehat", "Police Hat" }, { "ltherd", "Leather Daddy Vest" },
             { "Gasm", "Gas Mask" }, { "sung", "Sunglasses" },
             { "cb", "Cowboy Hat" }, { "hawa", "Hawaiian Shirt" }, { "HiVis", "Hi-Vis Vest" },
-            { "whtsnks", "White Trainers" }, { "saiyanarmour", "Saiyan Armour" }, { "saiyanhair", "Saiyan Hair" }, { "Saiyanscouter", "Scouter" }, { "saiyanshoe", "Saiyan Boots" }, { "bnda", "Bandit Bandana" }, { "pplr", "Propeller Hat" }, { "rollers", "Roller Skates" },
+            { "whtsnks", "White Trainers" }, { "saiyanarmour", "Saiyan Armour" }, { "saiyanhair", "Saiyan Hair" }, { "Saiyanscouter", "Scouter" }, { "saiyanshoe", "Saiyan Boots" }, { "bnda", "Bandit Bandana" }, { "pplr", "Propeller Hat" }, { "rollers", "Roller Skates" }, { "RSCrown", "Blue Partyhat" }, { "banemask", "Bane Mask" }, { "Moonboots", "Moon Boots" }, { "Redhoodie", "Red Hoodie" }, { "Tacvest", "Tactical Vest" }, { "spacesuit", "Spacesuit" },
         };
 
         static string Label(string n)
@@ -132,8 +132,11 @@ namespace BigBootyCheems
             Array.Copy(baseOpen, srcOpen, srcOpen.Length);
             Array.Copy(baseHalf, srcHalf, srcHalf.Length);
             Array.Copy(baseShut, srcShut, srcShut.Length);
+            // the spacesuit has its own boots: it hides whatever shoes are picked (they come back when it's off)
+            bool suit = false;
+            foreach (var sl in slots) if (sl.Key == "Top" && sl.Current == "spacesuit") suit = true;
             for (int i = slots.Count - 1; i >= 0; i--)
-                if (slots[i].Warps && slots[i].Px != null)
+                if (slots[i].Warps && slots[i].Px != null && !(suit && slots[i].Key == "Shoes"))
                     foreach (var f in new[] { srcOpen, srcHalf, srcShut }) Over(HairFor(slots[i], slots[i].Frame2 && slots[i].Px2 != null ? slots[i].Px2 : slots[i].Px), f, w, 0, 0);
         }
 
