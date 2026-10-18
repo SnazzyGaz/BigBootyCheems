@@ -191,7 +191,7 @@ namespace BigBootyCheems
         {
             if (sprite != null) return;
             scale = BodyLen / ArtGrip;
-            using (var s = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("Tool_fish.png"))
+            using (var s = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("tools/fish.png"))
             using (var raw = new Bitmap(s))
             {
                 int w = (int)Math.Ceiling(ArtW * scale), h = (int)Math.Ceiling(ArtH * scale);

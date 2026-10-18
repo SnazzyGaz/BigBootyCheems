@@ -18,7 +18,7 @@ namespace BigBootyCheems
         {
             get
             {
-                var want = new Dictionary<string, string> { { "Hat", "saiyanhair" }, { "Face", "Saiyanscouter" }, { "Top", "saiyanarmour" }, { "Shoes", "saiyanshoe" } };
+                var want = new Dictionary<string, string> { { "Hat", "saiyan-hair" }, { "Face", "scouter" }, { "Top", "saiyan-armour" }, { "Shoes", "saiyan-boots" } };
                 int ok = 0;
                 foreach (var s in slots) { string v; if (want.TryGetValue(s.Key, out v) && s.Current == v) ok++; }
                 return ok == 4;
@@ -47,7 +47,7 @@ namespace BigBootyCheems
         // the hair layer to bake into his frames: gold while powered up
         int[] HairFor(Slot s, int[] px)
         {
-            if (!ssj || s.Key != "Hat" || s.Current != "saiyanhair") return px;
+            if (!ssj || s.Key != "Hat" || s.Current != "saiyan-hair") return px;
             if (ssjHair == null || ssjHairOf != px) { ssjHair = Goldify(px); ssjHairOf = px; }
             return ssjHair;
         }

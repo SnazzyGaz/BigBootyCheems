@@ -19,15 +19,15 @@ namespace BigBootyCheems
             {
                 if (FullSaiyan) return Outfit.Saiyan;
                 string hat = Worn("Hat"), face = Worn("Face"), top = Worn("Top"), shoes = Worn("Shoes");
-                if (top == "ltherd") return Outfit.Leather;
-                if (hat == "HardHat" && top == "HiVis" && shoes == "boots") return Outfit.Builder;
-                if (hat == "Policehat" && face == "sung") return Outfit.Cop;
-                if (hat == "Partyhat" && top == "hawa" && face == "sung") return Outfit.Party;
-                if (hat == "cb" && face == "bnda" && shoes == "boots") return Outfit.Outlaw;
-                if (hat == "Astro" && top == "spacesuit") return Outfit.Astro;
-                if (face == "Gasm") return Outfit.Gas;
-                if (shoes == "rollers") return Outfit.Jet;
-                if (hat == "pplr") return Outfit.Propeller;
+                if (top == "leather-daddy-vest") return Outfit.Leather;
+                if (hat == "hard-hat" && top == "hi-vis-vest" && shoes == "boots") return Outfit.Builder;
+                if (hat == "police-hat" && face == "sunglasses") return Outfit.Cop;
+                if (hat == "party-hat" && top == "hawaiian-shirt" && face == "sunglasses") return Outfit.Party;
+                if (hat == "cowboy-hat" && face == "bandit-bandana" && shoes == "boots") return Outfit.Outlaw;
+                if (hat == "astronaut-helmet" && top == "spacesuit") return Outfit.Astro;
+                if (face == "gas-mask") return Outfit.Gas;
+                if (shoes == "roller-skates") return Outfit.Jet;
+                if (hat == "propeller-hat") return Outfit.Propeller;
                 return Outfit.None;
             }
         }
@@ -303,20 +303,20 @@ namespace BigBootyCheems
             f.Add(new Particle { Kind = Particle.Sprite, Spr = signSpr, SW = SignW, SH = SignH, X = wall - 190, Y = floor - SignH / 2, Delay = 1.2f, Life = 7.2f });
         }
 
-        // the wet floor sign art (Fx_wetfloor.png), scaled down
+        // the wet floor sign art (art/fx/wet-floor-sign.png), scaled down
         static void DrawSign(Graphics g)
         {
-            using (var st = Res("Fx_wetfloor.png")) using (var img = new Bitmap(st))
+            using (var st = Res("fx/wet-floor-sign.png")) using (var img = new Bitmap(st))
             {
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                 g.DrawImage(img, 0, 0, SignW, SignH);
             }
         }
 
-        // two crossed strips of the repeating tape art (Fx_tape.png)
+        // two crossed strips of the repeating tape art (art/fx/caution-tape.png)
         static void DrawTape(Graphics g)
         {
-            using (var st = Res("Fx_tape.png")) using (var tile = new Bitmap(st))
+            using (var st = Res("fx/caution-tape.png")) using (var tile = new Bitmap(st))
             {
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                 float k = (float)TapeStrip / tile.Height;

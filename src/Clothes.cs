@@ -1,6 +1,6 @@
 // Clothes: headgear and shoes drawn on top of the cheems after the wobble, so they stay rigid.
 // Items are full-canvas PNGs, either the clothes canvas (450x732, hero 58 px down) or the hero canvas
-// (450x674), embedded as Hat_<Name>.png / Shoes_<Name>.png.
+// (450x674), in art/clothes/<hat|face|top|shoes>/<name>.png.
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -27,34 +27,42 @@ namespace BigBootyCheems
         }
         readonly List<Slot> slots = new List<Slot>();
 
+        // item names come from the file names: art/clothes/<slot>/<name>.png, e.g. "propeller-hat" -> "Propeller Hat"
         static readonly Dictionary<string, string> Pretty = new Dictionary<string, string>
         {
-            { "Astro", "Astronaut Helmet" }, { "BikeHelm", "Motorbike Helmet" }, { "HardHat", "Hard Hat" }, { "Partyhat", "Party Hat" },
-            { "boots", "Boots" }, { "crocs", "Crocs" }, { "jordans", "Jordans" },
-            { "Hdres", "Headdress" }, { "Policehat", "Police Hat" }, { "ltherd", "Leather Daddy Vest" },
-            { "Gasm", "Gas Mask" }, { "sung", "Sunglasses" },
-            { "cb", "Cowboy Hat" }, { "hawa", "Hawaiian Shirt" }, { "HiVis", "Hi-Vis Vest" },
-            { "whtsnks", "White Trainers" }, { "saiyanarmour", "Saiyan Armour" }, { "saiyanhair", "Saiyan Hair" }, { "Saiyanscouter", "Scouter" }, { "saiyanshoe", "Saiyan Boots" }, { "bnda", "Bandit Bandana" }, { "pplr", "Propeller Hat" }, { "rollers", "Roller Skates" }, { "RSCrown", "Blue Partyhat" }, { "banemask", "Bane Mask" }, { "Moonboots", "Moon Boots" }, { "Redhoodie", "Red Hoodie" }, { "Tacvest", "Tactical Vest" }, { "spacesuit", "Spacesuit" },
+            { "hi-vis-vest", "Hi-Vis Vest" }, { "blue-partyhat", "Blue Partyhat" },
         };
 
         static string Label(string n)
         {
             string p;
             if (Pretty.TryGetValue(n, out p)) return p;
-            var sb = new System.Text.StringBuilder();
-            for (int i = 0; i < n.Length; i++) { if (i > 0 && char.IsUpper(n[i]) && !char.IsUpper(n[i - 1])) sb.Append(' '); sb.Append(i == 0 ? char.ToUpper(n[i]) : n[i]); }
-            return sb.ToString();
+            var words = n.Split('-');
+            for (int i = 0; i < words.Length; i++) if (words[i].Length > 0) words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1);
+            return string.Join(" ", words);
         }
+
+        // outfits saved by older versions used the old file names
+        static readonly Dictionary<string, string> OldNames = new Dictionary<string, string>
+        {
+            { "Astro", "astronaut-helmet" }, { "BikeHelm", "motorbike-helmet" }, { "HardHat", "hard-hat" }, { "Hdres", "headdress" },
+            { "Partyhat", "party-hat" }, { "Policehat", "police-hat" }, { "cb", "cowboy-hat" }, { "pplr", "propeller-hat" },
+            { "saiyanhair", "saiyan-hair" }, { "Fedora", "fedora" }, { "RSCrown", "blue-partyhat" }, { "RicePaddyHat", "rice-paddy-hat" },
+            { "Gasm", "gas-mask" }, { "Saiyanscouter", "scouter" }, { "bnda", "bandit-bandana" }, { "sung", "sunglasses" }, { "banemask", "bane-mask" },
+            { "HiVis", "hi-vis-vest" }, { "hawa", "hawaiian-shirt" }, { "ltherd", "leather-daddy-vest" }, { "saiyanarmour", "saiyan-armour" },
+            { "Redhoodie", "red-hoodie" }, { "Tacvest", "tactical-vest" },
+            { "rollers", "roller-skates" }, { "saiyanshoe", "saiyan-boots" }, { "whtsnks", "white-trainers" }, { "Moonboots", "moon-boots" },
+        };
 
         void SetupClothes()
         {
             // inserted in reverse so they read Headgear, Face, Top, Shoes (and layer shoes, top, face, hat)
             baseOpen = (int[])srcOpen.Clone(); baseHalf = (int[])srcHalf.Clone(); baseShut = (int[])srcShut.Clone();
             // everything is baked into his art so it moves with him (sway, head turning, wobble)
-            AddSlot("Shoes", "Shoes_", "Shoes", true);
-            AddSlot("Top", "Top_", "Top", true);
-            AddSlot("Face", "Face_", "Face", true);
-            AddSlot("Headgear", "Hat_", "Hat", true);
+            AddSlot("Shoes", "clothes/shoes/", "Shoes", true);
+            AddSlot("Top", "clothes/top/", "Top", true);
+            AddSlot("Face", "clothes/face/", "Face", true);
+            AddSlot("Headgear", "clothes/hat/", "Hat", true);
         }
         int[] baseOpen, baseHalf, baseShut;     // the bare hero (each eye frame)
 
@@ -86,6 +94,7 @@ namespace BigBootyCheems
             };
             menu.Items.Insert(0, menuItem);
             string saved = LoadSetting(key);
+            string renamed; if (saved != null && OldNames.TryGetValue(saved, out renamed)) saved = renamed;
             if (!string.IsNullOrEmpty(saved) && slot.Names.Contains(saved)) Wear(slot, saved, false);
         }
 

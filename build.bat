@@ -11,15 +11,26 @@ if not exist "%CSC%" (
   exit /b 1
 )
 
-rem every picture and sound in art\ is embedded in the exe under its own file name
-set "RES="
-for %%f in (art\*.png art\*.wav) do set "RES=!RES! /resource:%%f,%%~nxf"
-
 if not exist dist mkdir dist
+
+rem every picture and sound under art\ is embedded in the exe, named by its path inside art\
+rem (art\clothes\hat\crown.png becomes "clothes/hat/crown.png"). The list goes in a response file
+rem so the command line never gets too long, however many items are added.
+set "ROOT=%CD%\art\"
+> dist\resources.rsp (
+  for /r art %%f in (*.png *.wav) do (
+    set "FULL=%%f"
+    set "REL=!FULL:%ROOT%=!"
+    if /i "!REL:~0,4!"=="art\" set "REL=!REL:~4!"
+    set "NAME=!REL:\=/!"
+    echo /resource:"art\!REL!",!NAME!
+  )
+)
+
 "%CSC%" /nologo /target:winexe /optimize+ /platform:anycpu ^
-  /out:dist\BigBootyCheems.exe /win32icon:art\bbc.ico ^
+  /out:dist\BigBootyCheems.exe /win32icon:art\icon.ico ^
   /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll ^
-  %RES% src\*.cs
+  @dist\resources.rsp src\*.cs
 if errorlevel 1 (
   echo Build failed.
   exit /b 1

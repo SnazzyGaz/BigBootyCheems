@@ -80,13 +80,28 @@ build.bat
 
 The output is `dist\BigBootyCheems.exe`. Everything in `art\` (pictures and sounds) is embedded into the exe at build time.
 
+### Project layout
+
+```
+src/                 the code
+art/
+  hero/              the base cheems: open.png, half.png, shut.png (eyes open, half, shut)
+  clothes/
+    hat/ face/ top/ shoes/   one PNG per item; the file name is the menu name
+  tools/             sprites for the hitting tools
+  fx/                the wet floor sign and caution tape
+  sounds/            slaps, farts, poop, splat, whip, bat
+  icon.ico
+docs/                pictures for this page
+```
+
 ### Adding clothes
 
-Drop a PNG into `art\` with a slot prefix and rebuild:
+Drop a PNG into the right `art\clothes\` folder and rebuild:
 
-- `Hat_<name>.png`, `Face_<name>.png`, `Top_<name>.png` or `Shoes_<name>.png`
-- Draw it on the hero canvas (450×674), or on the clothes canvas (450×732, the hero sits 58 px down). Either works.
-- For a two-frame animation, add `<name>2.png` alongside it (like the propeller hat).
+- Name it in lower case with dashes, e.g. `art\clothes\hat\top-hat.png`. It shows in the menu as *Top Hat*.
+- Draw it on the clothes canvas (450×732, the hero sits 58 px down) or the hero canvas (450×674).
+- For a two-frame animation, add `<name>2.png` alongside it (like `propeller-hat2.png`).
 
 ## Uninstall
 

@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Big Booty Cheems")]
 [assembly: AssemblyProduct("Big Booty Cheems")]
-[assembly: AssemblyVersion("1.0.23.0")]
+[assembly: AssemblyVersion("1.0.24.0")]
 
 namespace BigBootyCheems
 {
@@ -126,16 +126,16 @@ namespace BigBootyCheems
         {
             FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; StartPosition = FormStartPosition.Manual;
             Text = "Big Booty Cheems";
-            using (var s = Res("Hero1.png")) using (var raw = new Bitmap(s)) srcOpen = LoadArt(raw);
-            using (var s = Res("HalfB.png")) using (var raw = new Bitmap(s)) srcHalf = LoadArt(raw);
-            using (var s = Res("Blink.png")) using (var raw = new Bitmap(s)) srcShut = LoadArt(raw);
+            using (var s = Res("hero/open.png")) using (var raw = new Bitmap(s)) srcOpen = LoadArt(raw);
+            using (var s = Res("hero/half.png")) using (var raw = new Bitmap(s)) srcHalf = LoadArt(raw);
+            using (var s = Res("hero/shut.png")) using (var raw = new Bitmap(s)) srcShut = LoadArt(raw);
             src = srcOpen;
-            WhipSound = new Sfx(Res("whip.wav"));
-            poopSound = new Sfx(Res("poop.wav")); splatSound = new Sfx(Res("splat.wav"));
+            WhipSound = new Sfx(Res("sounds/whip.wav"));
+            poopSound = new Sfx(Res("sounds/poop.wav")); splatSound = new Sfx(Res("sounds/splat.wav"));
             fartSounds = new Sfx[6];
-            for (int i = 0; i < fartSounds.Length; i++) fartSounds[i] = new Sfx(Res("fart" + (i + 1) + ".wav"));
+            for (int i = 0; i < fartSounds.Length; i++) fartSounds[i] = new Sfx(Res("sounds/fart" + (i + 1) + ".wav"));
             slapSounds = new Sfx[6];
-            for (int i = 0; i < slapSounds.Length; i++) slapSounds[i] = new Sfx(Res("slap" + (i + 1) + ".wav"));
+            for (int i = 0; i < slapSounds.Length; i++) slapSounds[i] = new Sfx(Res("sounds/slap" + (i + 1) + ".wav"));
 
             cw = w + 2 * Tune.Pad; ch = h + 2 * Tune.Pad;
             outPx = new int[cw * ch];

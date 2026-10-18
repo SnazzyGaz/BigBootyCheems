@@ -19,7 +19,7 @@ namespace BigBootyCheems
 
         void SetupTools()
         {
-            BatSound = new Sfx(Res("bat.wav"));
+            BatSound = new Sfx(Res("sounds/bat-hit.wav"));
             var tools = new ToolStripMenuItem("Tools");
             // picking a tool puts it out; picking it again puts it away
             var kinds = new[] { "Whip", "Cat o' Nine Tails", "Chancla", "Baseball Bat", "Wet Fish" };
@@ -315,7 +315,7 @@ namespace BigBootyCheems
             g.ResetTransform();
         }
 
-        // your art, if there is any: a PNG lying sideways with the held end on the RIGHT (Tool_<name>.png).
+        // your art, if there is any: a PNG lying sideways with the held end on the RIGHT (art/tools/<name>.png).
         // It's flipped and scaled once so it runs handle -> tip along +x, (HandleLen + HeadLen) long.
         protected virtual string SpriteName { get { return null; } }
         static readonly Dictionary<string, Bitmap> sprites = new Dictionary<string, Bitmap>();
@@ -324,7 +324,7 @@ namespace BigBootyCheems
             if (SpriteName == null) return null;
             Bitmap b;
             if (sprites.TryGetValue(SpriteName, out b)) return b;
-            var st = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("Tool_" + SpriteName + ".png");
+            var st = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("tools/" + SpriteName + ".png");
             if (st != null)
                 using (st) using (var raw = new Bitmap(st))
                 {
