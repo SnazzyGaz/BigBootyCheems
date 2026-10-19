@@ -68,6 +68,7 @@ namespace BigBootyCheems
         {
             int now = Environment.TickCount;
             SsjTick(now);
+            SaverTick(now);
             StayAboveTaskbar(now);
             FxTick(now);
             if (breathing && !timer.Enabled) timer.Start();

@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Big Booty Cheems")]
 [assembly: AssemblyProduct("Big Booty Cheems")]
-[assembly: AssemblyVersion("1.0.28.0")]
+[assembly: AssemblyVersion("1.0.34.0")]
 
 namespace BigBootyCheems
 {
@@ -52,14 +52,22 @@ namespace BigBootyCheems
                     try { Native.SetProcessDPIAware(); } catch { }
                     Native.NoPowerThrottling();
                     Application.EnableVisualStyles();
-                    var form = new Buddy();
+                    // a stray timer tick on a cheems that's just been removed mustn't bring up an error box
+                    Application.ThreadException += (s, ev) =>
+                    {
+                        if (ev.Exception is ObjectDisposedException) return;
+                        MessageBox.Show(ev.Exception.Message, "Big Booty Cheems", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    };
+                    Buddy.Context = new ApplicationContext();
+                    Buddy.StartAll();
+                    var first = Buddy.All[0];
                     var listener = new Thread(() =>
                     {
                         quit.WaitOne();
-                        try { form.BeginInvoke((Action)form.Close); } catch { }
+                        try { first.BeginInvoke((Action)Buddy.ExitAll); } catch { }
                     }) { IsBackground = true };
                     listener.Start();
-                    Application.Run(form);
+                    Application.Run(Buddy.Context);
                 }
                 finally { mutex.ReleaseMutex(); }
             }
@@ -122,8 +130,10 @@ namespace BigBootyCheems
         bool leftDown, dragging; Point dragStart, winStart;
         ContextMenuStrip menu;
 
-        public Buddy()
+        public Buddy(int unit, bool first)
         {
+            this.unit = unit;
+            All.Add(this);
             FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; StartPosition = FormStartPosition.Manual;
             Text = "Big Booty Cheems";
             using (var s = Res("hero/open.png")) using (var raw = new Bitmap(s)) srcOpen = LoadArt(raw);
@@ -142,6 +152,7 @@ namespace BigBootyCheems
             CreateBuffer();
             var wa = Screen.PrimaryScreen.WorkingArea;
             winX = wa.Right - cw - 300; winY = wa.Bottom - ch + Tune.Pad + Tune.FeetSink;   // feet on the taskbar
+            if (!first) PlaceNew(wa);
             Location = new Point(winX, winY); Size = new Size(cw, ch);
 
             menu = new ContextMenuStrip();
@@ -149,7 +160,7 @@ namespace BigBootyCheems
             menu.Items.Add("Check for updates...", null, (s, e) => CheckForUpdates());
             menu.Items.Add(new ToolStripMenuItem("Big Booty Cheems v" + Updater.Short(Updater.Current)) { Enabled = false });
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("Exit", null, (s, e) => Close());
+            menu.Items.Add("Exit", null, (s, e) => ExitAll());
 
             timer = new System.Windows.Forms.Timer { Interval = 15 };
             timer.Tick += (s, e) =>
@@ -164,6 +175,10 @@ namespace BigBootyCheems
             poll.Tick += (s, e) => { PollSwipe(); IdleTick(); };
             SetupIdle();
             SetupGravity();
+            SetupPoopMode();
+            SetupFacing();
+            SetupSaver();
+            SetupUnits();
             SetupTools();
             SetupClothes();
             foreach (ToolStripItem it in menu.Items)
@@ -223,7 +238,7 @@ namespace BigBootyCheems
                     }
                     try { Process.Start(Application.ExecutablePath, "--updated"); }
                     catch (Exception ex) { MessageBox.Show(this, "Updated, but couldn't restart: " + ex.Message, "Big Booty Cheems"); }
-                    Close();
+                    ExitAll();
                 }));
             });
         }
@@ -310,7 +325,8 @@ namespace BigBootyCheems
         {
             int now = Environment.TickCount;
             lastSlapTick = now;
-            float lx = sx - winX - Tune.Pad, ly = sy - winY - Tune.Pad;
+            float lx = LX(sx), ly = sy - winY - Tune.Pad;
+            if (flip) dir = -dir;                     // screen directions are mirrored on a flipped cheems
             // a click pushes away from the side it hit; a swipe pushes the way the hand was travelling
             float cx = Tune.ButtCX * Tune.Scale;
             if (dir == 0) dir = lx >= cx ? -1 : 1;
@@ -345,24 +361,9 @@ namespace BigBootyCheems
         // ---------------------------------------------------------- spray
         SprayOverlay spray;
 
-        void Spray()
+        // the liquid layer: more on top of the existing one if it can reach, otherwise a fresh one
+        void EnsureSpray(Point emit, bool wide)
         {
-            Mixer.Warm();
-            var outfit = CurrentOutfit;
-            if (outfit == Outfit.Saiyan)
-            {
-                // a true Saiyan doesn't poop: he powers up instead (a little clench as he strains)
-                StartSsj();
-                StartMove(MoveKind.Clench, 0.9f, 1f);
-                timer.Start();
-                return;
-            }
-            // fire from deep inside the butt, low down; the spray layer sits *behind* the cheems,
-            // so the stream emerges from under the art instead of appearing in mid-air
-            var emit = ButtHole();
-            if (CostumePoop(outfit, emit)) { timer.Start(); return; }
-            poopSound.Play();
-            bool wide = outfit == Outfit.Jet || outfit == Outfit.Astro;      // he'll shoot off left: the liquid layer needs the whole width
             var scr = Screen.FromPoint(emit);
             if (spray != null && !spray.IsDisposed && spray.CanEmitFrom(emit) && (!wide || spray.OverlayLeft == scr.Bounds.Left))
             {
@@ -382,13 +383,35 @@ namespace BigBootyCheems
                 sp.Show();
                 Native.SetWindowPos(sp.Handle, Handle, 0, 0, 0, 0, 0x1 | 0x2 | 0x10);   // just below us (NOSIZE|NOMOVE|NOACTIVATE)
             }
+        }
+
+        void Spray()
+        {
+            Mixer.Warm();
+            var outfit = CurrentOutfit;
+            if (outfit == Outfit.Saiyan)
+            {
+                // a true Saiyan doesn't poop: he powers up instead (a little clench as he strains)
+                StartSsj();
+                StartMove(MoveKind.Clench, 0.9f, 1f);
+                timer.Start();
+                return;
+            }
+            // fire from deep inside the butt, low down; the spray layer sits *behind* the cheems,
+            // so the stream emerges from under the art instead of appearing in mid-air
+            var emit = ButtHole();
+            if (CostumePoop(outfit, emit)) { timer.Start(); return; }
+            poopSound.Play();
+            bool wide = outfit == Outfit.Jet || outfit == Outfit.Astro || flip;      // he'll shoot off left: the liquid layer needs the whole width
+            EnsureSpray(emit, wide);
+            spray.SetDir(Facing, 0);
             if (outfit == Outfit.Builder) CordonOff(emit, spray);
             if (outfit == Outfit.Cop) StartCop();
             if (outfit == Outfit.Jet) StartJet();
             if (outfit == Outfit.Astro) { astroHitY = emit.Y; StartAstro(); }
             // recoil: the cheeks get a squishy kick, no whip sound
             int now = Environment.TickCount;
-            slaps.Add(new Slap { X = emit.X - winX - Tune.Pad - 6, Y = emit.Y - winY - Tune.Pad, Dir = -1, Amp = Tune.Amp * 0.8f, T0 = now });
+            slaps.Add(new Slap { X = LX(emit.X) - 6, Y = emit.Y - winY - Tune.Pad, Dir = -1, Amp = Tune.Amp * 0.8f, T0 = now });
             timer.Start();
         }
 
@@ -503,7 +526,7 @@ namespace BigBootyCheems
 
         bool InBelly(Point screen)
         {
-            int x = screen.X - winX - Tune.Pad, y = screen.Y - winY - Tune.Pad;
+            int x = LX(screen.X), y = screen.Y - winY - Tune.Pad;
             if (x < 0 || y < 0 || x >= w || y >= h) return false;
             if (((src[y * w + x] >> 24) & 0xFF) < 40) return false;
             float bx = x / Tune.Scale, by = y / Tune.Scale;
@@ -517,7 +540,7 @@ namespace BigBootyCheems
             pokes = now - lastPoke <= Tune.BellyWindowMs ? pokes + 1 : 1;
             lastPoke = now;
             // a soft squish where you poked, no slap sound
-            slaps.Add(new Slap { X = p.X - winX - Tune.Pad, Y = p.Y - winY - Tune.Pad, Dir = 1, Amp = Tune.Amp * 0.45f, T0 = now });
+            slaps.Add(new Slap { X = LX(p.X), Y = p.Y - winY - Tune.Pad, Dir = 1, Amp = Tune.Amp * 0.45f, T0 = now });
             if (slaps.Count > 4) slaps.RemoveAt(0);
             timer.Start();
             if (pokes >= Tune.BellyPokes) { pokes = 0; Spray(); }
@@ -525,7 +548,7 @@ namespace BigBootyCheems
 
         bool InButt(Point screen)
         {
-            int x = screen.X - winX - Tune.Pad, y = screen.Y - winY - Tune.Pad;
+            int x = LX(screen.X), y = screen.Y - winY - Tune.Pad;
             if (x < 0 || y < 0 || x >= w || y >= h) return false;
             if (((src[y * w + x] >> 24) & 0xFF) < 40) return false;
             float bx = x / Tune.Scale, by = y / Tune.Scale;
@@ -539,6 +562,7 @@ namespace BigBootyCheems
 
         void Render()
         {
+            if (closing || IsDisposed) return;
             int now = Environment.TickCount;
             slaps.RemoveAll(p => (now - p.T0) > Tune.Decay * p.DecayMul * 1000 * 6);
             PrepareMoves(now);
@@ -548,8 +572,10 @@ namespace BigBootyCheems
             Array.Copy(artPx, outPx, outPx.Length);
             DrawSsj(outPx);
             DrawCop(outPx);
+            if (flip) Mirror(outPx);
             hadLiquid = CompositeSpray();
             hadFx = CompositeFx();
+            if (rot != 0) { PushRotated(); return; }      // crawling up a wall or along the top
             Marshal.Copy(outPx, 0, bits, outPx.Length);
             Push();
         }
@@ -682,6 +708,7 @@ namespace BigBootyCheems
 
         void Push()
         {
+            if (closing || IsDisposed) return;
             Native.GdiFlush();
             IntPtr screen = Native.GetDC(IntPtr.Zero);
             var dst = new Native.POINT { x = winX, y = winY }; var sz = new Native.SIZE { cx = cw, cy = ch }; var s0 = new Native.POINT();
@@ -713,6 +740,7 @@ namespace BigBootyCheems
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
+            if (All.Count > 1) BeginInvoke((Action)(() => { if (!StackInOrder()) RestackAll(); }));
             if (e.Button == MouseButtons.Left) { leftDown = true; dragging = false; dragStart = Cursor.Position; winStart = new Point(winX, winY); Capture = true; }
         }
         protected override void OnMouseMove(MouseEventArgs e)
@@ -731,7 +759,7 @@ namespace BigBootyCheems
                 winX = winStart.X + c.X - dragStart.X; winY = winStart.Y + c.Y - dragStart.Y;
                 dragTrail.Enqueue(new KeyValuePair<int, Point>(Environment.TickCount, c));
                 while (dragTrail.Count > 2 && Environment.TickCount - dragTrail.Peek().Key > 120) dragTrail.Dequeue();
-                Native.SetWindowPos(Handle, new IntPtr(-1), winX, winY, cw, ch, 0x10);
+                Native.SetWindowPos(Handle, IntPtr.Zero, winX, winY, cw, ch, 0x4 | 0x10);   // move only: keep the stacking order
                 Push();
                 timer.Start();   // inertia wobble runs on the render timer
             }
@@ -739,6 +767,7 @@ namespace BigBootyCheems
         protected override void OnMouseUp(MouseEventArgs e)
         {
             base.OnMouseUp(e);
+            if (All.Count > 1) BeginInvoke((Action)(() => { if (!StackInOrder()) RestackAll(); }));
             if (e.Button == MouseButtons.Left)
             {
                 Capture = false; leftDown = false;

@@ -18,12 +18,13 @@ namespace BigBootyCheems
         const float SpeedMin = 1500f, SpeedMax = 2300f;
         const float FadeAfter = 5.5f, FadeOver = 3.0f;   // after the spray starts
         const float Thresh = 0.55f;                       // metaball surface level
-        const int Cell = 2;                               // field resolution (screen px per cell)
+        readonly int Cell = 2;                            // field resolution (screen px per cell); coarser for the full-width layer
 
         // drops
         float[] x = new float[MaxDrops], y = new float[MaxDrops], vx = new float[MaxDrops], vy = new float[MaxDrops];
         float[] r = new float[MaxDrops], slide = new float[MaxDrops];
         byte[] state = new byte[MaxDrops];               // 0 unused, 1 flying, 2 on wall, 3 on floor
+        sbyte[] side = new sbyte[MaxDrops];              // which wall a drop is stuck to: +1 right, -1 left
         int count;
         readonly Random rng = new Random();
 
@@ -69,8 +70,21 @@ namespace BigBootyCheems
         double tA;
 
         public SprayOverlay(Point emit, Screen screen) : this(emit, screen, false) { }
+        // non-stop pooping: keeps emitting (and never fades) until switched off
+        bool continuous;
+        public bool Continuous
+        {
+            get { return continuous; }
+            set { continuous = value; if (timer != null) timer.Interval = value ? 33 : 16; }   // non-stop: 30 fps is plenty
+        }
+        float contAcc, dirAng;                            // spray direction (radians, 0 = right)
+        bool leftWall; int leftWallX;
+        public void SetDir(float dx, float dy) { dirAng = (float)Math.Atan2(dy, dx); }
+
         public SprayOverlay(Point emit, Screen screen, bool wide)
         {
+            leftWall = wide; leftWallX = screen.Bounds.Left;
+            if (wide) Cell = 3;
             FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; StartPosition = FormStartPosition.Manual;
             var wa = screen.WorkingArea;
             wallX = screen.Bounds.Right;                 // the monitor's right edge
@@ -146,11 +160,20 @@ namespace BigBootyCheems
                 MoveDrop(i, j++);
             }
             count = j;
+            if (need <= 0) return;
+            // still full (non-stop mode): recycle the oldest drops on the walls as well
+            j = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (need > 0 && state[i] == 2) { need--; continue; }
+                MoveDrop(i, j++);
+            }
+            count = j;
         }
         void MoveDrop(int a, int b)
         {
             if (a == b) return;
-            x[b] = x[a]; y[b] = y[a]; vx[b] = vx[a]; vy[b] = vy[a]; r[b] = r[a]; slide[b] = slide[a]; state[b] = state[a];
+            x[b] = x[a]; y[b] = y[a]; vx[b] = vx[a]; vy[b] = vy[a]; r[b] = r[a]; slide[b] = slide[a]; state[b] = state[a]; side[b] = side[a];
         }
 
         void Emit(int n, float dt)
@@ -160,7 +183,8 @@ namespace BigBootyCheems
             {
                 int i = count++;
                 float sp = Rand(SpeedMin, SpeedMax);
-                float ang = Rand(-0.22f, 0.10f);             // mostly flat, a bit of upward spread
+                float spread = Rand(-0.22f, 0.10f);          // mostly flat, a bit of upward spread
+                float ang = dirAng + (Math.Cos(dirAng) < -0.5 ? -spread : spread);
                 vx[i] = sp * (float)Math.Cos(ang); vy[i] = sp * (float)Math.Sin(ang);
                 // spread this frame's drops along the path they'd have covered since last frame,
                 // so the stream stays joined to the butt instead of leaving a gap
@@ -204,26 +228,42 @@ namespace BigBootyCheems
                             else
                             {
                                 if (!splatted) { splatted = true; if (WallHit != null) WallHit(); }
-                                state[i] = 2; vx[i] = 0; vy[i] = vy[i] * 0.2f + Rand(-260, 260); r[i] *= 1.25f;
+                                state[i] = 2; side[i] = 1; vx[i] = 0; vy[i] = vy[i] * 0.2f + Rand(-260, 260); r[i] *= 1.25f;
                             }   // splat spreads up and down
                         }
+                        else if (leftWall && x[i] - r[i] * 0.5f <= leftWallX)
+                        {
+                            x[i] = leftWallX + r[i] * Rand(0.2f, 2.2f) + Rand(0, 6);
+                            if (!splatted) { splatted = true; if (WallHit != null) WallHit(); }
+                            state[i] = 2; side[i] = -1; vx[i] = 0; vy[i] = vy[i] * 0.2f + Rand(-260, 260); r[i] *= 1.25f;
+                        }
+                        else if (y[i] - r[i] * 0.5f <= top) { y[i] = top + r[i] * 0.5f; vy[i] = Math.Abs(vy[i]) * 0.1f; vx[i] *= 0.4f; }   // hits the ceiling and drops
                         else if (y[i] >= floorY - r[i] * 0.5f) { state[i] = 3; y[i] = floorY - r[i] * 0.5f; vy[i] = 0; vx[i] *= 0.25f; }
                         else if (x[i] < left - 40 || y[i] > floorY + 40) state[i] = 0;
                         break;
                     case 2: // sliding down the wall, thick and slow
                         vy[i] += (slide[i] - vy[i]) * Math.Min(1f, dt * 3.5f);   // splash spread dies off, then it slumps
                         y[i] += vy[i] * dt;
-                        x[i] += (wallX - r[i] * 0.45f - x[i]) * Math.Min(1f, dt * 0.6f);   // slowly sags onto the wall
-                        if (y[i] >= floorY - r[i] * 0.5f) { state[i] = 3; y[i] = floorY - r[i] * 0.5f; vx[i] = -Rand(5, 40); }
+                        float wx = side[i] < 0 ? leftWallX + r[i] * 0.45f : wallX - r[i] * 0.45f;
+                        x[i] += (wx - x[i]) * Math.Min(1f, dt * 0.6f);   // slowly sags onto the wall
+                        if (y[i] >= floorY - r[i] * 0.5f) { state[i] = 3; y[i] = floorY - r[i] * 0.5f; vx[i] = side[i] < 0 ? Rand(5, 40) : -Rand(5, 40); }
                         break;
                     case 3: // pooled on the floor, spreading out a touch
                         x[i] += vx[i] * dt; vx[i] *= 1 - 3f * dt;
+                        if (continuous) { r[i] -= 2.6f * dt; if (r[i] < 1.5f) { state[i] = 0; break; } }   // non-stop: the floor puddle soaks away
                         if (x[i] > wallX - r[i] * 0.4f) x[i] = wallX - r[i] * 0.4f;
+                        if (leftWall && x[i] < leftWallX + r[i] * 0.4f) x[i] = leftWallX + r[i] * 0.4f;
                         break;
                 }
             }
 
-            if (bage < EmitSecs + dt)
+            if (Continuous)
+            {
+                contAcc += EmitRate * 0.6f * dt; int n = (int)contAcc; contAcc -= n;
+                if (n > 0) Emit(n, dt);
+                startTick = now;                                  // never starts fading while it's going
+            }
+            else if (bage < EmitSecs + dt)
             {
                 float want = Math.Min(EmitSecs, bage) * EmitRate;
                 int n = (int)(want - emitted); if (n > 0) { Emit(n, dt); emitted += n; }
@@ -293,17 +333,23 @@ namespace BigBootyCheems
             double ts = Now(); TField += ts - tf;
             // shade: surface where field crosses the threshold, lit from the top-left, glossy highlight
             int ox0 = fx0 * Cell, ox1 = Math.Min(ow, fx1 * Cell), oy0 = fy0 * Cell, oy1 = Math.Min(oh, fy1 * Cell);
-            for (int oy = oy0; oy < oy1; oy++)
+            // walk the field a cell at a time and skip empty cells whole (most of the screen), then shade
+            // the few pixels inside the cells that have liquid in them
+            float skip = (Thresh - 0.12f) * 2f, invCell = 1f / Cell;
+            int b0s = Math.Max(1, fy0), b1s = Math.Min(fh - 2, fy1), a0s = Math.Max(1, fx0), a1s = Math.Min(fw - 2, fx1);
+            for (int b = b0s; b < b1s; b++)
+            for (int a = a0s; a < a1s; a++)
             {
-                float gy = (float)oy / Cell; int b = (int)gy; float ty = gy - b;
-                if (b < 1 || b >= fh - 2) continue;
-                for (int ox = ox0; ox < ox1; ox++)
+                int i0 = b * fw + a;
+                float f00 = field[i0], f10 = field[i0 + 1], f01 = field[i0 + fw], f11 = field[i0 + fw + 1];
+                if (f00 + f10 + f01 + f11 < skip) continue;
+                int oyEnd = Math.Min(oh, b * Cell + Cell), oxEnd = Math.Min(ow, a * Cell + Cell);
+                for (int oy = b * Cell; oy < oyEnd; oy++)
                 {
-                    float gx = (float)ox / Cell; int a = (int)gx; float tx = gx - a;
-                    if (a < 1 || a >= fw - 2) continue;
-                    int i0 = b * fw + a;
-                    float f00 = field[i0], f10 = field[i0 + 1], f01 = field[i0 + fw], f11 = field[i0 + fw + 1];
-                    if (f00 + f10 + f01 + f11 < (Thresh - 0.12f) * 2f) continue;
+                    float ty = (oy - b * Cell) * invCell;
+                for (int ox = a * Cell; ox < oxEnd; ox++)
+                {
+                    float tx = (ox - a * Cell) * invCell;
                     float f = (f00 * (1 - tx) + f10 * tx) * (1 - ty) + (f01 * (1 - tx) + f11 * tx) * ty;
                     float al = Smooth(Thresh - 0.06f, Thresh + 0.06f, f);
                     if (al <= 0.01f) continue;
@@ -320,6 +366,7 @@ namespace BigBootyCheems
                     int ia = (int)(A * 255);
                     int ir = Clamp((int)(cr * A)), ig = Clamp((int)(cg * A)), ib = Clamp((int)(cb * A));
                     px[oy * ow + ox] = (ia << 24) | (Math.Min(ir, ia) << 16) | (Math.Min(ig, ia) << 8) | Math.Min(ib, ia);
+                }
                 }
             }
             dirtyX0 = ox0; dirtyX1 = ox1; dirtyY0 = oy0; dirtyY1 = oy1;

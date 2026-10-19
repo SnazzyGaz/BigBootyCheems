@@ -93,7 +93,7 @@ namespace BigBootyCheems
                 foreach (var kv in items) kv.Value.Checked = kv.Key == slot.Current;
             };
             menu.Items.Insert(0, menuItem);
-            string saved = LoadSetting(key);
+            string saved = LoadSetting(UnitKey(key));
             string renamed; if (saved != null && OldNames.TryGetValue(saved, out renamed)) saved = renamed;
             if (!string.IsNullOrEmpty(saved) && slot.Names.Contains(saved)) Wear(slot, saved, false);
         }
@@ -110,7 +110,7 @@ namespace BigBootyCheems
                 var s2 = Res(slot.Prefix + n + "2.png");
                 if (s2 != null) using (s2) using (var raw = new Bitmap(s2)) slot.Px2 = Rasterize(raw);
             }
-            if (save) SaveSetting(slot.Key, n);
+            if (save) SaveSetting(UnitKey(slot.Key), n);
             if (slot.Warps) RebuildFrames();
             artValid = false;
             if (IsHandleCreated) Render();

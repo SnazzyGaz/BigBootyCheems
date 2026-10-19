@@ -8,7 +8,8 @@ namespace BigBootyCheems
 {
     partial class Buddy
     {
-        bool gravity = true, flying, astroFlight;
+        static bool gravity = true;          // shared by every cheems
+        bool flying, astroFlight;
         int astroStart;
         float flyX, flyY, flyVX, flyVY;
         int lastBonk = Environment.TickCount - 3600000;
@@ -52,7 +53,7 @@ namespace BigBootyCheems
 
         void GravityTick(int now, float dt)
         {
-            if ((!gravity && !astroFlight && !hopping) || dragging || floating || jetting) { if (dragging) { flying = false; astroFlight = false; } return; }
+            if ((!gravity && !astroFlight && !hopping) || dragging || floating || jetting || crawling) { if (dragging) { flying = false; astroFlight = false; } return; }
             var a = FlightArea();
             if (!flying)
             {
@@ -64,7 +65,7 @@ namespace BigBootyCheems
             {
                 // the poop is a rocket: thrust up and away while it sprays, then drift in low gravity
                 float t = (now - astroStart) / 1000f;
-                if (astroFlight && t < 0.55f) { flyVX -= 1500 * dt; flyVY -= 1250 * dt; if (spray != null && !spray.IsDisposed) spray.SetEmit(ButtHole()); }
+                if (astroFlight && t < 0.55f) { flyVX -= Facing * 1500 * dt; flyVY -= 1250 * dt; if (spray != null && !spray.IsDisposed) spray.SetEmit(ButtHole()); }
                 flyVY += 210 * dt;
                 float k = 1 - 1.3f * dt; flyVX *= k; flyVY *= k;
             }
@@ -75,8 +76,8 @@ namespace BigBootyCheems
             }
             flyX += flyVX * dt; flyY += flyVY * dt;
             // walls: his butt is on the right, so the right wall is a proper cheek slap
-            if (flyX > a.Right) { flyX = a.Right; Bonk(Math.Abs(flyVX), true, now); flyVX = -flyVX * 0.55f; }
-            if (flyX < a.Left) { flyX = a.Left; Bonk(Math.Abs(flyVX), false, now); flyVX = -flyVX * 0.55f; }
+            if (flyX > a.Right) { flyX = a.Right; Bonk(Math.Abs(flyVX), !flip, now); flyVX = -flyVX * 0.55f; }
+            if (flyX < a.Left) { flyX = a.Left; Bonk(Math.Abs(flyVX), flip, now); flyVX = -flyVX * 0.55f; }
             if (flyY < a.Top) { flyY = a.Top; flyVY = Math.Abs(flyVY) * 0.4f; }
             if (flyY >= a.Bottom)
             {
@@ -119,7 +120,7 @@ namespace BigBootyCheems
         void StartAstro()
         {
             astroFlight = true; astroStart = Environment.TickCount; astroRebound = true;
-            flyX = winX; flyY = winY; flyVX = -150; flyVY = -150; flying = true;
+            flyX = winX; flyY = winY; flyVX = -150 * Facing; flyVY = -150; flying = true;
             timer.Start();
         }
 
@@ -135,8 +136,8 @@ namespace BigBootyCheems
             for (int i = 0; i < 12; i++)
                 f.Add(new Particle
                 {
-                    Kind = Particle.Blob, X = scr.Bounds.Right - Rnd(8, 20), Y = astroHitY + Rnd(-40, 40), Delay = Rnd(0, 0.5f),
-                    VX = Rnd(-260, -50), VY = Rnd(-90, 40), Gravity = -5, Drag = 0.04f, Bounce = 0.9f,
+                    Kind = Particle.Blob, X = flip ? scr.Bounds.Left + Rnd(8, 20) : scr.Bounds.Right - Rnd(8, 20), Y = astroHitY + Rnd(-40, 40), Delay = Rnd(0, 0.5f),
+                    VX = -Facing * Rnd(50, 260), VY = Rnd(-90, 40), Gravity = -5, Drag = 0.04f, Bounce = 0.9f,
                     Size = Rnd(7, 14), Life = Rnd(7.5f, 9.5f)
                 });
         }
@@ -150,6 +151,7 @@ namespace BigBootyCheems
             if (now - lastZCheck < 500 || !IsHandleCreated || dragging) return;
             lastZCheck = now;
             if (menu != null && menu.Visible) return;
+            if (!StackInOrder()) { RestackAll(); return; }
             var cls = new System.Text.StringBuilder(64);
             IntPtr h = Native.GetWindow(Handle, 3);              // GW_HWNDPREV: the window just above us
             for (int i = 0; i < 400 && h != IntPtr.Zero; i++, h = Native.GetWindow(h, 3))
@@ -158,7 +160,7 @@ namespace BigBootyCheems
                 string c = cls.ToString();
                 if (c == "Shell_TrayWnd" || c == "Shell_SecondaryTrayWnd")
                 {
-                    Native.SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 0x1 | 0x2 | 0x10);   // topmost again, no move/size/activate
+                    RestackAll();          // every cheems back on top, in their proper order
                     return;
                 }
             }
@@ -166,7 +168,7 @@ namespace BigBootyCheems
 
         Point ButtCentre()
         {
-            return new Point(winX + Tune.Pad + (int)(Tune.ButtCX * Tune.Scale), winY + Tune.Pad + (int)(Tune.ButtCY * Tune.Scale));
+            return new Point(SX(Tune.ButtCX * Tune.Scale), winY + Tune.Pad + (int)(Tune.ButtCY * Tune.Scale));
         }
 
         void Clap(float speed, int now)
@@ -183,8 +185,8 @@ namespace BigBootyCheems
             lastBonk = now;
             var b = ButtCentre();
             float p = Math.Min(1.7f, 0.3f + speed / 1800f);
-            if (buttSide) DoSlap(b.X + 20, b.Y, -1, p);             // butt into the wall
-            else DoSlap(b.X - 30, b.Y, 1, p * 0.6f);                 // face-first: the cheeks still slosh
+            if (buttSide) DoSlap(b.X + (int)(20 * Facing), b.Y, -Facing, p);             // butt into the wall
+            else DoSlap(b.X - (int)(30 * Facing), b.Y, Facing, p * 0.6f);                 // face-first: the cheeks still slosh
         }
     }
 }

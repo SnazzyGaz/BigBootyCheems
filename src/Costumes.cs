@@ -35,7 +35,7 @@ namespace BigBootyCheems
         // where it all comes out (screen)
         Point ButtHole()
         {
-            return new Point(winX + Tune.Pad + (int)((Tune.ButtCX + Tune.ButtRX * 0.30f) * Tune.Scale),
+            return new Point(SX((Tune.ButtCX + Tune.ButtRX * 0.30f) * Tune.Scale),
                              winY + Tune.Pad + (int)((Tune.ButtCY + Tune.ButtRY * 0.38f) * Tune.Scale));
         }
 
@@ -102,7 +102,7 @@ namespace BigBootyCheems
                 f.Add(new Particle
                 {
                     Kind = Particle.Confetti, X = e.X + Rnd(-4, 4), Y = e.Y + Rnd(-4, 4),
-                    VX = Rnd(-550, 650), VY = Rnd(-1300, -480), Gravity = 520, Drag = 1.6f, Sway = Rnd(20, 70),
+                    VX = Facing * Rnd(-550, 650), VY = Rnd(-1300, -480), Gravity = 520, Drag = 1.6f, Sway = Rnd(20, 70),
                     Size = Rnd(6, 11), Spin = Rnd(0, 6.3f), SpinV = Rnd(-14, 14), Life = Rnd(5.5f, 7.5f), Delay = Rnd(0, 0.45f),
                     Color = ConfettiColours[fxRng.Next(ConfettiColours.Length)]
                 });
@@ -119,7 +119,7 @@ namespace BigBootyCheems
                 f.Add(new Particle
                 {
                     Kind = Particle.Puff, X = e.X + Rnd(-3, 3), Y = e.Y + Rnd(-3, 3), Delay = i * 0.04f,
-                    VX = Rnd(70, 260), VY = Rnd(-90, -5), Drag = 0.8f, Gravity = -22,
+                    VX = Facing * Rnd(70, 260), VY = Rnd(-90, -5), Drag = 0.8f, Gravity = -22,
                     Size = Rnd(10, 16), Grow = Rnd(22, 34), Life = Rnd(3.8f, 5.5f), Alpha = Rnd(0.35f, 0.55f),
                     Color = GasColours[fxRng.Next(GasColours.Length)]
                 });
@@ -134,7 +134,7 @@ namespace BigBootyCheems
                 f.Add(new Particle
                 {
                     Kind = Particle.Blob, X = e.X + Rnd(-3, 3), Y = e.Y + Rnd(-3, 3), Delay = i * 0.06f,
-                    VX = Rnd(50, 230), VY = Rnd(-90, 25), Gravity = -5, Drag = 0.04f, Bounce = 0.9f,
+                    VX = Facing * Rnd(50, 230), VY = Rnd(-90, 25), Gravity = -5, Drag = 0.04f, Bounce = 0.9f,
                     Size = Rnd(7, 14), Life = Rnd(7.5f, 9.5f)
                 });
             StartFloat(true);
@@ -149,11 +149,11 @@ namespace BigBootyCheems
                 f.Add(new Particle
                 {
                     Kind = Particle.Blob, X = e.X, Y = e.Y + Rnd(-3, 3), Delay = i * 0.03f,
-                    VX = Rnd(1500, 2300), VY = Rnd(-550, 120), Gravity = 1300, Drag = 0.12f, Bounce = 0.78f,
+                    VX = Facing * Rnd(1500, 2300), VY = Rnd(-550, 120), Gravity = 1300, Drag = 0.12f, Bounce = 0.78f,
                     Size = Rnd(5, 9), Life = Rnd(4.5f, 6f)
                 });
             int now = Environment.TickCount;
-            slaps.Add(new Slap { X = e.X - winX - Tune.Pad - 6, Y = e.Y - winY - Tune.Pad, Dir = -1, Amp = Tune.Amp, T0 = now });
+            slaps.Add(new Slap { X = LX(e.X) - 6, Y = e.Y - winY - Tune.Pad, Dir = -1, Amp = Tune.Amp, T0 = now });
         }
 
         void PropellerPoop(Point e)
@@ -164,7 +164,7 @@ namespace BigBootyCheems
                 f.Add(new Particle
                 {
                     Kind = Particle.Puff, X = e.X + Rnd(-6, 6), Y = e.Y + Rnd(0, 10), Delay = i * 0.02f,
-                    VX = Rnd(-60, 140), VY = Rnd(60, 200), Drag = 1.8f, Gravity = 0,
+                    VX = Facing * Rnd(-60, 140), VY = Rnd(60, 200), Drag = 1.8f, Gravity = 0,
                     Size = Rnd(5, 9), Grow = Rnd(22, 36), Life = Rnd(1.3f, 2.2f), Alpha = Rnd(0.25f, 0.4f),
                     Color = 0x9A8A6A
                 });
@@ -216,7 +216,7 @@ namespace BigBootyCheems
             if (!jetting) return;
             if (dragging) { jetting = false; jetV = 0; return; }
             float t = (now - jetStart) / 1000f;
-            if (t < 0.55f) jetV -= 2100 * dt;                                    // thrust while it's coming out
+            if (t < 0.55f) jetV -= Facing * 2100 * dt;                                    // thrust while it's coming out
             else
             {
                 float s = Math.Sign(jetV), nv = jetV - s * 850 * dt;             // rolling to a stop
@@ -298,9 +298,9 @@ namespace BigBootyCheems
             if (tapeSpr == null) tapeSpr = FxOverlay.MakeSprite(TapeW, TapeH, DrawTape);
             var f = Fx();
             var scr = Screen.FromPoint(e);
-            int wall = scr.Bounds.Right, floor = scr.WorkingArea.Bottom;
-            f.Add(new Particle { Kind = Particle.Sprite, Spr = tapeSpr, SW = TapeW, SH = TapeH, X = wall - TapeW / 2 + 30, Y = floor - TapeH / 2 + 12, Delay = 0.8f, Life = 7.6f });
-            f.Add(new Particle { Kind = Particle.Sprite, Spr = signSpr, SW = SignW, SH = SignH, X = wall - 190, Y = floor - SignH / 2, Delay = 1.2f, Life = 7.2f });
+            int wall = scr.Bounds.Right, floor = scr.WorkingArea.Bottom, lw = scr.Bounds.Left;
+            f.Add(new Particle { Kind = Particle.Sprite, Spr = tapeSpr, SW = TapeW, SH = TapeH, X = flip ? lw + TapeW / 2 - 30 : wall - TapeW / 2 + 30, Y = floor - TapeH / 2 + 12, Delay = 0.8f, Life = 7.6f });
+            f.Add(new Particle { Kind = Particle.Sprite, Spr = signSpr, SW = SignW, SH = SignH, X = flip ? lw + 190 : wall - 190, Y = floor - SignH / 2, Delay = 1.2f, Life = 7.2f });
         }
 
         // the wet floor sign art (art/fx/wet-floor-sign.png), scaled down
@@ -381,9 +381,9 @@ namespace BigBootyCheems
         // ---------------------------------------------------------- per tick (from the idle poll)
         // while he's moving fast (carried, skating, floating) the layers under him draw everything
         // themselves: two windows can't move in perfect step, which showed as seams in the poop
-        bool Detached { get { return dragging || jetting || floating || flying; } }
+        bool Detached { get { return dragging || jetting || floating || flying || crawling; } }
 
-        bool FxActive { get { return floating || jetting || CopOn || flying; } }
+        bool FxActive { get { return floating || jetting || CopOn || flying || crawling || poopMode; } }
 
         void FxTick(int now)
         {
@@ -392,6 +392,7 @@ namespace BigBootyCheems
             FloatTick(now);
             JetTick(now, dt);
             GravityTick(now, dt);
+            PoopModeTick(now, dt);
             if (FxActive && !timer.Enabled) timer.Start();
         }
     }
